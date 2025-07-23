@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <!-- =========================================================
-       FETP Cost–Value Decision Aid Tool
+       FETP Cost–Value Decision Aid Tool  (with WTP tab)
        ========================================================= -->
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -19,65 +19,47 @@
 </head>
 <body>
   <div class="container-fluid">
-    <!-- =======================================================
-         HEADER
-         ======================================================= -->
+    <!-- ================= HEADER ================= -->
     <header class="text-center">
       <h1>FETP Cost–Value Decision Aid Tool</h1>
-      <p class="lead">Model programme uptake, compare implementation costs with stakeholder-perceived value, and optimise design.</p>
+      <p class="lead">Model programme uptake, convert preferences to monetary value, and compare that value with implementation costs.</p>
     </header>
 
     <!-- Quick instructions -->
     <div class="instruction-banner card">
       <i class="fa-solid fa-circle-info info-icon" data-bs-toggle="tooltip" title="Quick guide"></i>
-      <strong>How to use:</strong> Select options in <em>Inputs</em>, review cost items in <em>Costs &amp; Value</em>, then click <em>Calculate &amp; View Results</em>. Save alternative designs under <em>Scenarios</em> for comparison.
+      <strong>How to use:</strong> Configure programme in <em>Inputs</em>, explore <em>WTP</em>, review <em>Costs&nbsp;&amp;&nbsp;Value</em>, then click <em>Calculate</em>. Save options in <em>Scenarios</em>.
     </div>
 
-    <!-- =======================================================
-         NAV TABS
-         ======================================================= -->
-    <nav class="tabs" role="tablist">
+    <!-- ================= NAV TABS =============== -->
+    <nav class="tabs">
       <ul class="nav nav-tabs" id="mainTab" role="tablist">
-        <li class="nav-item" role="presentation">
-          <button class="nav-link active" id="introTab-tab" data-bs-toggle="tab" data-bs-target="#introTab" type="button" role="tab">Introduction</button>
-        </li>
-        <li class="nav-item" role="presentation">
-          <button class="nav-link" id="attributesTab-tab" data-bs-toggle="tab" data-bs-target="#attributesTab" type="button" role="tab">Attributes</button>
-        </li>
-        <li class="nav-item" role="presentation">
-          <button class="nav-link" id="inputsTab-tab" data-bs-toggle="tab" data-bs-target="#inputsTab" type="button" role="tab">Inputs</button>
-        </li>
-        <li class="nav-item" role="presentation">
-          <button class="nav-link" id="probTab-tab" data-bs-toggle="tab" data-bs-target="#probTab" type="button" role="tab">Uptake</button>
-        </li>
-        <li class="nav-item" role="presentation">
-          <button class="nav-link" id="costsTab-tab" data-bs-toggle="tab" data-bs-target="#costsTab" type="button" role="tab">Costs &amp; Value</button>
-        </li>
-        <li class="nav-item" role="presentation">
-          <button class="nav-link" id="scenariosTab-tab" data-bs-toggle="tab" data-bs-target="#scenariosTab" type="button" role="tab">Scenarios</button>
-        </li>
+        <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#introTab" type="button">Introduction</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#attributesTab" type="button">Attributes</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#inputsTab" type="button">Inputs</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#probTab" type="button">Uptake</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#wtpTab"  type="button">WTP</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#costsTab" type="button">Costs&nbsp;&amp;&nbsp;Value</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#scenariosTab" type="button">Scenarios</button></li>
       </ul>
     </nav>
 
-    <!-- =======================================================
-         TAB CONTENT
-         ======================================================= -->
+    <!-- ============== TAB CONTENT ============== -->
     <div class="tab-content" id="mainTabContent">
 
-      <!-- ------------------ INTRO ------------------- -->
-      <div class="tab-pane fade show active" id="introTab" role="tabpanel" aria-labelledby="introTab-tab">
+      <!-- INTRO ------------------------------------------------ -->
+      <div class="tab-pane fade show active" id="introTab">
         <div class="card">
-          <h2>Overview <i class="fa-solid fa-circle-info info-icon" data-bs-toggle="tooltip" title="What this tool does"></i></h2>
-          <p>This tool links Discrete Choice Experiment (DCE) preference weights to a cost–benefit framework re-labelled as <strong>Cost–Value</strong> to avoid confusion. “Value” represents the monetary value stakeholders place on programme features (derived from willingness-to-pay). When the aggregated stakeholder value for a proposed training configuration exceeds its implementation cost, the configuration yields a positive <strong>net surplus</strong> from the stakeholder perspective.</p>
-          <p>Steps: (1) Choose configuration under <em>Inputs</em>. (2) Enter or adjust cost data under <em>Costs &amp; Value</em>. (3) Select a value scenario (₹ per effectively enrolled trainee) reflecting the strength of preference/value signals from the DCE. (4) Calculate results, review uptake, stakeholder value, and net surplus. (5) Save and compare scenarios.</p>
+          <h2>Overview</h2>
+          <p>This tool links Discrete Choice Experiment (DCE) preference weights to a cost framework. The <strong>WTP tab</strong> converts preferences into ₹-valued willingness-to-pay (WTP) per trainee. That value is multiplied by effective enrolment to produce stakeholder value, automatically used in the Cost–Value analysis.</p>
         </div>
       </div>
 
-      <!-- ------------------ ATTRIBUTES -------------- -->
-      <div class="tab-pane fade" id="attributesTab" role="tabpanel" aria-labelledby="attributesTab-tab">
-        <h2>Key Programme Attributes <i class="fa-solid fa-circle-info info-icon" data-bs-toggle="tooltip" title="What each setting means"></i></h2>
+      <!-- ATTRIBUTES ------------------------------------------- -->
+      <div class="tab-pane fade" id="attributesTab">
+        <h2>Key Programme Attributes</h2>
         <div class="row g-4">
-          <!-- Training Delivery Method -->
+          <!-- Delivery -->
           <div class="col-md-6 col-lg-4">
             <div class="card attribute-card">
               <div class="attribute-icon"><i class="fa-solid fa-chalkboard"></i></div>
@@ -88,7 +70,7 @@
               </div>
             </div>
           </div>
-          <!-- Training Model -->
+          <!-- Model -->
           <div class="col-md-6 col-lg-4">
             <div class="card attribute-card">
               <div class="attribute-icon"><i class="fa-solid fa-user-clock"></i></div>
@@ -99,7 +81,7 @@
               </div>
             </div>
           </div>
-          <!-- Type of Training -->
+          <!-- Type -->
           <div class="col-md-6 col-lg-4">
             <div class="card attribute-card">
               <div class="attribute-icon"><i class="fa-solid fa-graduation-cap"></i></div>
@@ -110,14 +92,14 @@
               </div>
             </div>
           </div>
-          <!-- Annual Capacity -->
+          <!-- Capacity -->
           <div class="col-md-6 col-lg-4">
             <div class="card attribute-card">
               <div class="attribute-icon"><i class="fa-solid fa-people-group"></i></div>
               <div class="attribute-content">
                 <h4>Annual Training Capacity</h4>
                 <p><strong>Default:</strong> 100 trainees</p>
-                <p><strong>Alternatives:</strong> 500, 1,000, 2,000+</p>
+                <p><strong>Alternatives:</strong> 500, 1 000, 2 000+</p>
               </div>
             </div>
           </div>
@@ -127,23 +109,23 @@
               <div class="attribute-icon"><i class="fa-solid fa-hand-holding-dollar"></i></div>
               <div class="attribute-content">
                 <h4>Stipend Support</h4>
-                <p><strong>Default:</strong> ₹75,000</p>
-                <p><strong>Alternatives:</strong> ₹100,000, ₹150,000</p>
+                <p><strong>Default:</strong> ₹75 000</p>
+                <p><strong>Alternatives:</strong> ₹100 000, ₹150 000</p>
               </div>
             </div>
           </div>
-          <!-- Career Pathways -->
+          <!-- Career -->
           <div class="col-md-6 col-lg-4">
             <div class="card attribute-card">
               <div class="attribute-icon"><i class="fa-solid fa-briefcase"></i></div>
               <div class="attribute-content">
                 <h4>Career Pathways</h4>
                 <p><strong>Default:</strong> Government roles</p>
-                <p><strong>Alternatives:</strong> International, Academic &amp; Research, Private/NGOs</p>
+                <p><strong>Alternatives:</strong> International, Academic&nbsp;&amp;&nbsp;Research, Private/NGOs</p>
               </div>
             </div>
           </div>
-          <!-- Geographic Distribution -->
+          <!-- Geographic -->
           <div class="col-md-6 col-lg-4">
             <div class="card attribute-card">
               <div class="attribute-icon"><i class="fa-solid fa-map"></i></div>
@@ -165,31 +147,30 @@
               </div>
             </div>
           </div>
-          <!-- Total Cost signalling level (for DCE coefficient scaling only) -->
+          <!-- Cost signal -->
           <div class="col-md-6 col-lg-4">
             <div class="card attribute-card">
               <div class="attribute-icon"><i class="fa-solid fa-calculator"></i></div>
               <div class="attribute-content">
-                <h4>Total Cost Level (Signal)</h4>
-                <p><strong>Default:</strong> Medium (₹55,000/month)</p>
-                <p><strong>Alternatives:</strong> Low (₹27,000/month), High (₹83,000/month)</p>
-                <p class="small-text">Used in preference modelling; detailed programme cost entry occurs under <em>Costs &amp; Value</em>.</p>
+                <h4>Cost Signal (DCE)</h4>
+                <p><strong>Default:</strong> Medium (₹55 000/mo)</p>
+                <p><strong>Alternatives:</strong> Low (₹27 000/mo), High (₹83 000/mo)</p>
+                <p class="small-text">Used only for preference modelling; real costs entered in the next tabs.</p>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- ------------------ INPUTS ------------------ -->
-      <div class="tab-pane fade" id="inputsTab" role="tabpanel" aria-labelledby="inputsTab-tab">
+      <!-- INPUTS ---------------------------------------------- -->
+      <div class="tab-pane fade" id="inputsTab">
         <div class="card">
-          <h2>Configure Programme <i class="fa-solid fa-circle-info info-icon" data-bs-toggle="tooltip" title="Choose programme settings"></i></h2>
+          <h2>Configure Programme</h2>
           <form id="inputsForm">
-            <div class="input-cards row g-4">
+            <div class="row g-4">
               <!-- Delivery -->
               <div class="col-md-6 col-lg-4 input-level-card">
-                <h3>Training Delivery Method</h3>
-                <p>(Default: Hybrid)</p>
+                <h3>Training Delivery Method</h3><p>(default: Hybrid)</p>
                 <select name="deliveryMethod" class="form-control">
                   <option value="inperson">In-Person</option>
                   <option value="hybrid" selected>Hybrid</option>
@@ -198,17 +179,15 @@
               </div>
               <!-- Model -->
               <div class="col-md-6 col-lg-4 input-level-card">
-                <h3>Training Model</h3>
-                <p>(Default: Part-Time)</p>
+                <h3>Training Model</h3><p>(default: Part-Time)</p>
                 <select name="trainingModel" class="form-control">
-                  <option value="parttime" selected>Part-Time Model</option>
-                  <option value="fulltime">Full-Time Model (Scholarship)</option>
+                  <option value="parttime" selected>Part-Time</option>
+                  <option value="fulltime">Full-Time (Scholarship)</option>
                 </select>
               </div>
               <!-- Type -->
               <div class="col-md-6 col-lg-4 input-level-card">
-                <h3>Type of Training</h3>
-                <p>(Default: Advanced)</p>
+                <h3>Type of Training</h3><p>(default: Advanced)</p>
                 <select name="trainingType" class="form-control">
                   <option value="frontline">Frontline</option>
                   <option value="intermediate">Intermediate</option>
@@ -217,68 +196,63 @@
               </div>
               <!-- Capacity -->
               <div class="col-md-6 col-lg-4 input-level-card">
-                <h3>Annual Training Capacity</h3>
-                <p>(Default: 100 trainees)</p>
+                <h3>Annual Capacity</h3><p>(default: 100)</p>
                 <select name="annualCapacity" class="form-control">
-                  <option value="100" selected>100 trainees</option>
-                  <option value="500">500 trainees</option>
-                  <option value="1000">1,000 trainees</option>
-                  <option value="2000">2,000+ trainees</option>
+                  <option value="100" selected>100</option>
+                  <option value="500">500</option>
+                  <option value="1000">1 000</option>
+                  <option value="2000">2 000+</option>
                 </select>
               </div>
               <!-- Stipend -->
               <div class="col-md-6 col-lg-4 input-level-card">
-                <h3>Stipend Support</h3>
-                <p>(Default: ₹75,000)</p>
+                <h3>Stipend Support</h3><p>(default: ₹75 000)</p>
                 <select name="stipendSupport" class="form-control">
-                  <option value="75000" selected>₹75,000</option>
-                  <option value="100000">₹100,000</option>
-                  <option value="150000">₹150,000</option>
+                  <option value="75000" selected>₹75 000</option>
+                  <option value="100000">₹100 000</option>
+                  <option value="150000">₹150 000</option>
                 </select>
               </div>
               <!-- Career -->
               <div class="col-md-6 col-lg-4 input-level-card">
-                <h3>Career Pathways</h3>
-                <p>(Default: Government roles)</p>
+                <h3>Career Pathway</h3><p>(default: Government)</p>
                 <select name="careerPathway" class="form-control">
-                  <option value="government" selected>Government roles</option>
+                  <option value="government" selected>Government</option>
                   <option value="international">International</option>
-                  <option value="academic">Academic &amp; Research</option>
+                  <option value="academic">Academic&nbsp;&amp;&nbsp;Research</option>
                   <option value="private">Private/NGOs</option>
                 </select>
               </div>
               <!-- Geographic -->
               <div class="col-md-6 col-lg-4 input-level-card">
-                <h3>Geographic Distribution</h3>
-                <p>(Default: Regional)</p>
+                <h3>Geographic Distribution</h3><p>(default: Regional)</p>
                 <select name="geographicDistribution" class="form-control">
-                  <option value="centralized">Centralised Distribution</option>
-                  <option value="regional" selected>Regional Distribution</option>
-                  <option value="nationwide">Nationwide Distribution</option>
+                  <option value="centralized">Centralised</option>
+                  <option value="regional" selected>Regional</option>
+                  <option value="nationwide">Nationwide</option>
                 </select>
               </div>
               <!-- Accreditation -->
               <div class="col-md-6 col-lg-4 input-level-card">
-                <h3>Accreditation &amp; Quality</h3>
-                <p>(Default: National)</p>
+                <h3>Accreditation &amp; Quality</h3><p>(default: National)</p>
                 <select name="accreditation" class="form-control">
                   <option value="unaccredited">Unaccredited</option>
                   <option value="national" selected>National</option>
                   <option value="international">International</option>
                 </select>
               </div>
-              <!-- Cost signalling -->
+              <!-- Cost signal -->
               <div class="col-md-6 col-lg-4 input-level-card">
-                <h3>Total Cost Signal</h3>
-                <p>(Default: Medium - ₹55,000/mo)</p>
+                <h3>Cost Signal (DCE)</h3><p>(default: Medium)</p>
                 <select name="totalCost" class="form-control">
-                  <option value="low">Low (₹27,000/mo)</option>
-                  <option value="medium" selected>Medium (₹55,000/mo)</option>
-                  <option value="high">High (₹83,000/mo)</option>
+                  <option value="low">Low</option>
+                  <option value="medium" selected>Medium</option>
+                  <option value="high">High</option>
                 </select>
               </div>
             </div>
 
+            <!-- Buttons -->
             <div class="buttons-row mt-3">
               <button type="button" class="btn btn-secondary" onclick="resetInputs()">Reset</button>
               <button type="button" class="btn btn-primary" onclick="calculateScenario()">Calculate &amp; View Results</button>
@@ -286,227 +260,139 @@
             </div>
           </form>
 
-          <!-- Results modal -->
-          <div class="modal fade" id="resultModal" tabindex="-1" aria-labelledby="resultModalLabel" aria-hidden="true">
+          <!-- Modal -->
+          <div class="modal fade" id="resultModal" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered modal-xl">
               <div class="modal-content">
                 <div class="modal-header">
-                  <h5 class="modal-title" id="resultModalLabel">Scenario Results</h5>
-                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                  <h5 class="modal-title">Scenario Results</h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                   <div id="modalResults"></div>
                   <div id="implausibleWarnings" class="mt-3"></div>
                 </div>
                 <div class="modal-footer">
-                  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                  <button type="button" class="btn btn-primary" onclick="saveScenario()">Save Scenario</button>
+                  <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                  <button class="btn btn-primary" onclick="saveScenario()">Save Scenario</button>
                 </div>
               </div>
             </div>
-          </div> <!-- /modal -->
+          </div><!-- /modal -->
         </div>
-      </div>
+      </div><!-- /inputs tab -->
 
-      <!-- ------------------ UPTAKE ------------------ -->
-      <div class="tab-pane fade" id="probTab" role="tabpanel" aria-labelledby="probTab-tab">
+      <!-- UPTAKE --------------------------------------------- -->
+      <div class="tab-pane fade" id="probTab">
         <div class="card">
-          <h4>Predicted Uptake <i class="fa-solid fa-circle-info info-icon" data-bs-toggle="tooltip" title="Percentage likely to support / adopt the programme"></i></h4>
-          <p>Based on the selected configuration and DCE preference weights.</p>
+          <h4>Predicted Uptake</h4>
+          <p>Percentage of target population likely to support/adopt.</p>
           <div class="progress mt-3">
-            <div id="uptakeBar" class="progress-bar bg-success" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
+            <div id="uptakeBar" class="progress-bar" role="progressbar" style="width:0%">0%</div>
           </div>
           <button class="btn btn-primary mt-3" onclick="showUptakeRecommendations()">Recommendation</button>
         </div>
 
         <!-- Uptake modal -->
-        <div class="modal fade" id="uptakeModal" tabindex="-1" aria-labelledby="uptakeModalLabel" aria-hidden="true">
+        <div class="modal fade" id="uptakeModal" tabindex="-1">
           <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
-              <div class="modal-header">
-                <h5 class="modal-title" id="uptakeModalLabel">Uptake Recommendations</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-              </div>
-              <div class="modal-body">
-                <div id="uptakeResults"></div>
-              </div>
-              <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-              </div>
+              <div class="modal-header"><h5 class="modal-title">Uptake Recommendations</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+              <div class="modal-body"><div id="uptakeResults"></div></div>
+              <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Close</button></div>
             </div>
-          </div>
-        </div> <!-- /uptake modal -->
-      </div>
-
-      <!-- ------------------ COSTS & VALUE ----------- -->
-      <div class="tab-pane fade" id="costsTab" role="tabpanel" aria-labelledby="costsTab-tab">
-        <div class="card">
-          <h4>Cost–Value Analysis <i class="fa-solid fa-circle-info info-icon" data-bs-toggle="tooltip" title="Detailed breakdown of costs and stakeholder value"></i></h4>
-          <p>Enter or adjust cost components below. Select a value scenario (₹ per effectively enrolled trainee) reflecting stakeholders’ willingness-to-pay for the configured features.</p>
-
-          <div class="row g-4">
-            <!-- LEFT: Direct costs -->
-            <div class="col-md-6">
-              <h5>Direct Costs</h5>
-              <div class="form-group mb-3">
-                <label for="direct_salary_inCountry">Salary &amp; Benefits – In-Country Programme Staff</label>
-                <input type="number" id="direct_salary_inCountry" class="form-control" value="6000000">
-              </div>
-              <div class="form-group mb-3">
-                <label for="direct_salary_other">Salary &amp; Benefits – Other</label>
-                <input type="number" id="direct_salary_other" class="form-control" value="0">
-              </div>
-              <div class="form-group mb-3">
-                <label for="direct_equipment_office">Equipment &amp; Supplies – Office Equipment</label>
-                <input type="number" id="direct_equipment_office" class="form-control" value="1000000">
-              </div>
-              <div class="form-group mb-3">
-                <label for="direct_equipment_software">Equipment &amp; Supplies – Office Software</label>
-                <input type="number" id="direct_equipment_software" class="form-control" value="500000">
-              </div>
-              <div class="form-group mb-3">
-                <label for="direct_facilities_rent">Facilities – Rent &amp; Utilities</label>
-                <input type="number" id="direct_facilities_rent" class="form-control" value="0">
-              </div>
-              <div class="form-group mb-3">
-                <label for="direct_trainee_allowances">Trainee Support – Allowances</label>
-                <input type="number" id="direct_trainee_allowances" class="form-control" value="12500000">
-              </div>
-              <div class="form-group mb-3">
-                <label for="direct_trainee_equipment">Trainee Support – Equipment</label>
-                <input type="number" id="direct_trainee_equipment" class="form-control" value="1000000">
-              </div>
-              <div class="form-group mb-3">
-                <label for="direct_trainee_software">Trainee Support – Software</label>
-                <input type="number" id="direct_trainee_software" class="form-control" value="500000">
-              </div>
-              <div class="form-group mb-3">
-                <label for="direct_training_materials">Training – Materials</label>
-                <input type="number" id="direct_training_materials" class="form-control" value="250000">
-              </div>
-              <div class="form-group mb-3">
-                <label for="direct_training_workshops">Training – Workshops &amp; Seminars</label>
-                <input type="number" id="direct_training_workshops" class="form-control" value="1500000">
-              </div>
-              <div class="form-group mb-3">
-                <label for="direct_travel_inCountry">Travel – In-Country</label>
-                <input type="number" id="direct_travel_inCountry" class="form-control" value="5000000">
-              </div>
-              <div class="form-group mb-3">
-                <label for="direct_travel_international">Travel – International</label>
-                <input type="number" id="direct_travel_international" class="form-control" value="0">
-              </div>
-              <div class="form-group mb-3">
-                <label for="direct_other">Other Direct Expenses</label>
-                <input type="number" id="direct_other" class="form-control" value="250000">
-              </div>
-            </div>
-
-            <!-- RIGHT: Indirect costs + value selector -->
-            <div class="col-md-6">
-              <h5>Indirect Costs</h5>
-              <div class="form-group mb-3">
-                <label for="indirect_admin_management">Administrative Support – Management &amp; Oversight</label>
-                <input type="number" id="indirect_admin_management" class="form-control" value="10000000">
-              </div>
-              <div class="form-group mb-3">
-                <label for="indirect_admin_maintenance">Administrative Support – Office Maintenance</label>
-                <input type="number" id="indirect_admin_maintenance" class="form-control" value="0">
-              </div>
-              <div class="form-group mb-3">
-                <label for="indirect_inKind_salary">In-Kind Contributions – Salary</label>
-                <input type="number" id="indirect_inKind_salary" class="form-control" value="0">
-              </div>
-              <div class="form-group mb-3">
-                <label for="indirect_infra_upgrades">Infrastructure – Facility Upgrades</label>
-                <input type="number" id="indirect_infra_upgrades" class="form-control" value="0">
-              </div>
-              <div class="form-group mb-3">
-                <label for="indirect_infra_depreciation">Infrastructure – Equipment Depreciation</label>
-                <input type="number" id="indirect_infra_depreciation" class="form-control" value="500000">
-              </div>
-              <div class="form-group mb-3">
-                <label for="indirect_utilities_shared">Utilities – Shared Services</label>
-                <input type="number" id="indirect_utilities_shared" class="form-control" value="500000">
-              </div>
-              <div class="form-group mb-3">
-                <label for="indirect_prof_legal">Professional Services – Legal &amp; Financial</label>
-                <input type="number" id="indirect_prof_legal" class="form-control" value="0">
-              </div>
-              <div class="form-group mb-3">
-                <label for="indirect_training_staff">Training &amp; Capacity – Staff Development</label>
-                <input type="number" id="indirect_training_staff" class="form-control" value="100000">
-              </div>
-              <div class="form-group mb-3">
-                <label for="indirect_opportunity">Opportunity Cost – Trainee Salary Foregone</label>
-                <input type="number" id="indirect_opportunity" class="form-control" value="0">
-              </div>
-              <div class="form-group mb-3">
-                <label for="indirect_other">Other Indirect Costs</label>
-                <input type="number" id="indirect_other" class="form-control" value="0">
-              </div>
-
-              <h5 class="mt-4">Value Scenario (₹ per effectively enrolled trainee)</h5>
-              <select id="benefitScenario" class="form-control mb-3">
-                <option value="low">Low – ₹30,000</option>
-                <option value="medium" selected>Medium – ₹50,000</option>
-                <option value="high">High – ₹70,000</option>
-              </select>
-            </div>
-          </div> <!-- /row -->
-
-          <div id="costsBenefitsResults" class="mt-3"></div>
-
-          <div class="chart-container">
-            <canvas id="costBenefitChart" class="chart-box"></canvas>
-          </div>
-          <div class="chart-container">
-            <canvas id="netBenefitChart" class="chart-box"></canvas>
           </div>
         </div>
       </div>
 
-      <!-- ------------------ SCENARIOS --------------- -->
-      <div class="tab-pane fade" id="scenariosTab" role="tabpanel" aria-labelledby="scenariosTab-tab">
+      <!-- WTP ------------------------------------------------- -->
+      <div class="tab-pane fade" id="wtpTab">
         <div class="card">
-          <h4>Saved Scenarios <i class="fa-solid fa-circle-info info-icon" data-bs-toggle="tooltip" title="Review &amp; export saved configurations"></i></h4>
-          <p>Save configurations from the <em>Inputs</em> tab and compare here.</p>
+          <h4>Total WTP (Stakeholder Monetary Value)</h4>
+          <p>Sum of willingness-to-pay values for selected attributes.</p>
+          <div id="wtpResults" class="mt-3"></div>
+        </div>
+      </div>
+
+      <!-- COSTS & VALUE -------------------------------------- -->
+      <div class="tab-pane fade" id="costsTab">
+        <div class="card">
+          <h4>Cost–Value Analysis</h4>
+          <p>Stakeholder value comes directly from the WTP tab.</p>
+
+          <!-- Cost forms -->
+          <div class="row g-4">
+            <!-- Direct costs -->
+            <div class="col-md-6">
+              <h5>Direct Costs</h5>
+              <div class="form-group mb-3"><label for="direct_salary_inCountry">Salary &amp; Benefits – In-Country Staff</label><input type="number" id="direct_salary_inCountry" value="6000000" class="form-control"></div>
+              <div class="form-group mb-3"><label for="direct_salary_other">Salary &amp; Benefits – Other</label><input type="number" id="direct_salary_other" value="0" class="form-control"></div>
+              <div class="form-group mb-3"><label for="direct_equipment_office">Office Equipment</label><input type="number" id="direct_equipment_office" value="1000000" class="form-control"></div>
+              <div class="form-group mb-3"><label for="direct_equipment_software">Office Software</label><input type="number" id="direct_equipment_software" value="500000" class="form-control"></div>
+              <div class="form-group mb-3"><label for="direct_facilities_rent">Rent &amp; Utilities</label><input type="number" id="direct_facilities_rent" value="0" class="form-control"></div>
+              <div class="form-group mb-3"><label for="direct_trainee_allowances">Trainee Allowances</label><input type="number" id="direct_trainee_allowances" value="12500000" class="form-control"></div>
+              <div class="form-group mb-3"><label for="direct_trainee_equipment">Trainee Equipment</label><input type="number" id="direct_trainee_equipment" value="1000000" class="form-control"></div>
+              <div class="form-group mb-3"><label for="direct_trainee_software">Trainee Software</label><input type="number" id="direct_trainee_software" value="500000" class="form-control"></div>
+              <div class="form-group mb-3"><label for="direct_training_materials">Training Materials</label><input type="number" id="direct_training_materials" value="250000" class="form-control"></div>
+              <div class="form-group mb-3"><label for="direct_training_workshops">Workshops &amp; Seminars</label><input type="number" id="direct_training_workshops" value="1500000" class="form-control"></div>
+              <div class="form-group mb-3"><label for="direct_travel_inCountry">In-Country Travel</label><input type="number" id="direct_travel_inCountry" value="5000000" class="form-control"></div>
+              <div class="form-group mb-3"><label for="direct_travel_international">International Travel</label><input type="number" id="direct_travel_international" value="0" class="form-control"></div>
+              <div class="form-group mb-3"><label for="direct_other">Other Direct</label><input type="number" id="direct_other" value="250000" class="form-control"></div>
+            </div>
+
+            <!-- Indirect -->
+            <div class="col-md-6">
+              <h5>Indirect Costs</h5>
+              <div class="form-group mb-3"><label for="indirect_admin_management">Admin – Management</label><input type="number" id="indirect_admin_management" value="10000000" class="form-control"></div>
+              <div class="form-group mb-3"><label for="indirect_admin_maintenance">Admin – Maintenance</label><input type="number" id="indirect_admin_maintenance" value="0" class="form-control"></div>
+              <div class="form-group mb-3"><label for="indirect_inKind_salary">In-Kind – Salary</label><input type="number" id="indirect_inKind_salary" value="0" class="form-control"></div>
+              <div class="form-group mb-3"><label for="indirect_infra_upgrades">Infrastructure Upgrades</label><input type="number" id="indirect_infra_upgrades" value="0" class="form-control"></div>
+              <div class="form-group mb-3"><label for="indirect_infra_depreciation">Equipment Depreciation</label><input type="number" id="indirect_infra_depreciation" value="500000" class="form-control"></div>
+              <div class="form-group mb-3"><label for="indirect_utilities_shared">Shared Utilities</label><input type="number" id="indirect_utilities_shared" value="500000" class="form-control"></div>
+              <div class="form-group mb-3"><label for="indirect_prof_legal">Professional Services</label><input type="number" id="indirect_prof_legal" value="0" class="form-control"></div>
+              <div class="form-group mb-3"><label for="indirect_training_staff">Staff Development</label><input type="number" id="indirect_training_staff" value="100000" class="form-control"></div>
+              <div class="form-group mb-3"><label for="indirect_opportunity">Opportunity Cost (Trainees)</label><input type="number" id="indirect_opportunity" value="0" class="form-control"></div>
+              <div class="form-group mb-3"><label for="indirect_other">Other Indirect</label><input type="number" id="indirect_other" value="0" class="form-control"></div>
+            </div>
+          </div><!-- /row -->
+
+          <!-- Results -->
+          <div id="costsBenefitsResults" class="mt-3"></div>
+          <div class="chart-container"><canvas id="costBenefitChart" class="chart-box"></canvas></div>
+          <div class="chart-container"><canvas id="netBenefitChart" class="chart-box"></canvas></div>
+        </div>
+      </div><!-- /costs tab -->
+
+      <!-- SCENARIOS ------------------------------------------- -->
+      <div class="tab-pane fade" id="scenariosTab">
+        <div class="card">
+          <h4>Saved Scenarios</h4>
+          <p>Compare and export.</p>
           <div class="mb-3">
-            <button onclick="saveScenario()" class="btn btn-primary me-2">Save Scenario</button>
-            <button onclick="openComparison()" class="btn btn-secondary me-2">Compare &amp; Export PDF</button>
-            <button onclick="downloadCSV()" class="btn btn-secondary">Download CSV</button>
+            <button class="btn btn-primary me-2" onclick="saveScenario()">Save Scenario</button>
+            <button class="btn btn-secondary me-2" onclick="openComparison()">Compare &amp; Export PDF</button>
+            <button class="btn btn-secondary" onclick="downloadCSV()">Download CSV</button>
           </div>
-          <div class="table-responsive mt-3">
+          <div class="table-responsive">
             <table id="scenarioTable" class="table table-striped">
               <thead>
                 <tr>
-                  <th>Name</th>
-                  <th>Delivery</th>
-                  <th>Model</th>
-                  <th>Type</th>
-                  <th>Capacity</th>
-                  <th>Stipend</th>
-                  <th>Career</th>
-                  <th>Geographic</th>
-                  <th>Accreditation</th>
-                  <th>Cost Signal</th>
-                  <th>Uptake %</th>
-                  <th>Stakeholder Value</th>
-                  <th>Net Surplus</th>
+                  <th>Name</th><th>Delivery</th><th>Model</th><th>Type</th><th>Capacity</th>
+                  <th>Stipend</th><th>Career</th><th>Geo</th><th>Accred</th><th>Cost Signal</th>
+                  <th>Uptake&nbsp;%</th><th>Value</th><th>Net</th>
                 </tr>
-              </thead>
-              <tbody></tbody>
+              </thead><tbody></tbody>
             </table>
           </div>
         </div>
-      </div>
+      </div><!-- /scenarios tab -->
 
-    </div> <!-- /tab-content -->
+    </div><!-- /tab-content -->
 
     <footer class="text-center mt-4">
       <p>© 2025 FETP Cost–Value Decision Aid Tool</p>
     </footer>
-  </div> <!-- /container-fluid -->
+  </div><!-- /container -->
 
   <!-- Vendor JS -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.min.js"></script>
