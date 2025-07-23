@@ -1,6 +1,7 @@
 /* ============================================================
    FETP India Decision Aid Tool (Updated, Fully Functional)
    Enhanced with auto-render on tab switch, detailed handling.
+   Fixed tab activation by ensuring proper class toggling and initial setup.
 ============================================================ */
 (() => {
 "use strict";
@@ -66,6 +67,13 @@ document.addEventListener("DOMContentLoaded", ()=>{
     $("#runPSA").addEventListener("click", safe(runPSA));
     $("#saveScenarioBtn").addEventListener("click", safe(saveScenario));
     $("#exportPDFBtn").addEventListener("click", safe(exportPDF));
+
+    // Ensure initial tab is active and visible
+    const initialTab = $('.tablink.active');
+    if (initialTab) {
+      const tabId = initialTab.dataset.tab;
+      $(`#${tabId}`).style.display = 'block';
+    }
   }catch(e){ console.error(e); showError("Initialisation error. See console."); }
 });
 
@@ -76,8 +84,17 @@ function safe(fn){ return (...args)=>{ try{ hideError(); fn(...args); }catch(e){
 function bindTabs(){
   $("#tabs").addEventListener("click",e=>{
     const btn=e.target.closest(".tablink"); if(!btn)return;
-    $$(".tablink").forEach(b=>{b.classList.toggle("active",b===btn); b.setAttribute("aria-selected",b===btn?"true":"false");});
-    $$(".tabcontent").forEach(sec=>{sec.style.display = sec.id===btn.dataset.tab?"block":"none";});
+    $$(".tablink").forEach(b=>{
+      b.classList.remove("active");
+      b.setAttribute("aria-selected", "false");
+    });
+    btn.classList.add("active");
+    btn.setAttribute("aria-selected", "true");
+    $$(".tabcontent").forEach(sec=>{sec.style.display = "none";});
+    const targetTab = $(`#${btn.dataset.tab}`);
+    if (targetTab) {
+      targetTab.style.display = "block";
+    }
     // Auto-render if visiting and scenario calculated
     if(currentScenario){
       if(btn.dataset.tab==="wtpTab") renderWTPChart();
