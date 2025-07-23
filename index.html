@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -5,13 +6,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>FETP India Decision Aid Tool</title>
 
-  <!-- Google Fonts for Professional Look -->
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <!-- Google Fonts for Professional Typography -->
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
 
   <!-- Styles -->
   <link rel="stylesheet" href="styles.css" />
 
-  <!-- Icons & libs -->
+  <!-- Icons & Libraries -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
         integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkXzk5bV+nTtDIv5R16vuMJ6MqqV9iQ9M/dGv+VY8Gq60YxYFz+4Ib4Hg=="
         crossorigin="anonymous" referrerpolicy="no-referrer" />
@@ -20,131 +21,140 @@
 </head>
 
 <body>
-<noscript><p style="color:#c00;text-align:center;margin:20px;">Enable JavaScript to use this tool.</p></noscript>
+<noscript><p style="color:#c00;text-align:center;margin:20px;">Please enable JavaScript to use this tool.</p></noscript>
 
 <div class="container">
-
   <header>
     <h1>FETP India Decision Aid Tool</h1>
-    <p>Design and evaluate FETP configurations with stakeholder WTP, endorsement, costs, QALYs, and PSA. This tool helps decision-makers explore expansion options for Field Epidemiology Training Programs (FETP) in India.</p>
+    <p>A comprehensive tool to design and evaluate Field Epidemiology Training Program (FETP) configurations in India, incorporating stakeholder willingness-to-pay (WTP), endorsement rates, cost-benefit analysis, Quality-Adjusted Life Years (QALYs), and probabilistic sensitivity analysis (PSA).</p>
   </header>
 
-  <!-- Error banner -->
+  <!-- Error Banner -->
   <div id="globalError" class="error-box" style="display:none;"></div>
 
-  <!-- Tabs -->
+  <!-- Tabs Navigation -->
   <nav id="tabs" role="tablist" class="tabs">
     <button type="button" class="tablink active" data-tab="introTab" aria-selected="true"><i class="fa-solid fa-info-circle"></i> Introduction</button>
     <button type="button" class="tablink" data-tab="attributesTab" aria-selected="false"><i class="fa-solid fa-list"></i> Attributes</button>
     <button type="button" class="tablink" data-tab="inputsTab" aria-selected="false"><i class="fa-solid fa-sliders"></i> Inputs</button>
     <button type="button" class="tablink" data-tab="wtpTab" aria-selected="false"><i class="fa-solid fa-chart-bar"></i> WTP</button>
-    <button type="button" class="tablink" data-tab="endorseTab" aria-selected="false"><i class="fa-solid fa-thumbs-up"></i> Endorsement Rate</button>
-    <button type="button" class="tablink" data-tab="costsTab" aria-selected="false"><i class="fa-solid fa-calculator"></i> ₹ Cost–Benefit</button>
+    <button type="button" class="tablink" data-tab="endorseTab" aria-selected="false"><i class="fa-solid fa-thumbs-up"></i> Endorsement</button>
+    <button type="button" class="tablink" data-tab="costsTab" aria-selected="false"><i class="fa-solid fa-calculator"></i> Cost–Benefit</button>
     <button type="button" class="tablink" data-tab="qalyTab" aria-selected="false"><i class="fa-solid fa-heart-pulse"></i> QALY</button>
     <button type="button" class="tablink" data-tab="psaTab" aria-selected="false"><i class="fa-solid fa-flask"></i> PSA</button>
     <button type="button" class="tablink" data-tab="methodsTab" aria-selected="false"><i class="fa-solid fa-book-open"></i> Methods</button>
     <button type="button" class="tablink" data-tab="scenariosTab" aria-selected="false"><i class="fa-solid fa-folder-open"></i> Saved Scenarios</button>
   </nav>
 
-  <!-- Intro -->
+  <!-- Introduction Tab -->
   <section id="introTab" class="tabcontent" style="display:block" tabindex="0">
     <div class="intro-box">
-      <p><strong>Purpose:</strong> This tool supports decision-makers in assessing FETP expansion options using discrete-choice experiment (DCE) evidence on willingness-to-pay (WTP) and endorsement rates, combined with cost estimates, health-economic outcomes like Quality-Adjusted Life Years (QALYs), and probabilistic sensitivity analysis (PSA).</p>
-      <p><strong>How to Use:</strong> Start by selecting program attributes in the Inputs tab. Adjust sliders for capacity, costs, and other parameters. Click 'Calculate & View Results' to generate outputs across tabs. Save scenarios for comparison and export reports to PDF.</p>
+      <h2>Welcome to the FETP India Decision Aid Tool</h2>
+      <p><strong>Purpose:</strong> This tool empowers decision-makers to evaluate Field Epidemiology Training Program (FETP) expansion options in India. It integrates discrete-choice experiment (DCE) data on stakeholder willingness-to-pay (WTP) and endorsement rates with cost estimates, health-economic outcomes (QALYs), and probabilistic sensitivity analysis (PSA) to support evidence-based planning.</p>
+      <p><strong>How to Use:</strong> Navigate to the <em>Inputs</em> tab to configure program attributes such as type, duration, and delivery mode. Adjust sliders for capacity and costs, then click 'Calculate & View Results' to generate outputs across tabs. Save scenarios for comparison and export results to PDF for stakeholder reports.</p>
       <ul>
-        <li>Choose attribute levels (type, duration, focus, delivery, response time, capacity, cost).</li>
-        <li>View marginal and total WTP; predicted endorsement probability based on stakeholder preferences.</li>
-        <li>Compute present-value costs, benefits (in ₹), Benefit-Cost Ratio (BCR), and net benefit.</li>
-        <li>Estimate QALYs gained, Incremental Cost-Effectiveness Ratio (ICER), and compare to cost-effectiveness thresholds.</li>
-        <li>Run Monte Carlo PSA with customizable uncertainty ranges to assess robustness.</li>
-        <li>Save multiple scenarios, compare them in tables, and export detailed reports to PDF for sharing.</li>
+        <li><strong>Configure:</strong> Select attribute levels (e.g., program type, duration, focus) to design FETP scenarios.</li>
+        <li><strong>Evaluate WTP:</strong> Assess marginal and total WTP based on stakeholder preferences.</li>
+        <li><strong>Analyze Costs:</strong> Compute present-value costs, Benefit-Cost Ratio (BCR), and net benefits in ₹.</li>
+        <li><strong>Measure Health Impact:</strong> Estimate QALYs and Incremental Cost-Effectiveness Ratio (ICER) against thresholds.</li>
+        <li><strong>Assess Uncertainty:</strong> Run Monte Carlo PSA to evaluate robustness under uncertainty.</li>
+        <li><strong>Save & Share:</strong> Store multiple scenarios and export detailed PDF reports.</li>
       </ul>
-      <p><strong>Note:</strong> All calculations are based on placeholder DCE coefficients and cost assumptions. Replace with actual data for real-world use.</p>
+      <p><strong>Note:</strong> Calculations use placeholder DCE coefficients and cost assumptions. Update with actual data for production use. Ensure JavaScript is enabled for full functionality.</p>
     </div>
   </section>
 
-  <!-- Attributes -->
+  <!-- Attributes Tab -->
   <section id="attributesTab" class="tabcontent" tabindex="0">
-    <h2>Attributes & Levels (Reference Levels in Brackets)</h2>
-    <p>These attributes define FETP program configurations. Each has discrete levels derived from stakeholder consultations. Reference levels represent the baseline (status quo) for comparisons in WTP and endorsement calculations.</p>
+    <h2>Attributes & Levels</h2>
+    <p>Attributes define the configurable components of FETP programs, derived from stakeholder consultations. Each attribute has discrete levels, with reference levels (in brackets) serving as the baseline for WTP and endorsement calculations. Hover over icons for quick summaries.</p>
     <div class="attributes-list">
       <div class="attribute-card" tabindex="0">
         <div class="attribute-icon"><i class="fa-solid fa-graduation-cap"></i>
-          <div class="tooltip">Frontline (reference): Basic training; Intermediate: Mid-level skills; Advanced: Expert-level epidemiology.</div>
+          <div class="tooltip">Frontline (ref): Basic training; Intermediate: Mid-level skills; Advanced: Expert-level epidemiology.</div>
         </div>
         <div class="attribute-content">
           <h4>Program Type</h4>
-          <p>Frontline (ref): Focuses on basic surveillance; Intermediate: Builds investigative skills; Advanced: Emphasizes leadership and research.</p>
+          <p><strong>Frontline (ref):</strong> Basic surveillance and response training for rapid deployment.<br>
+             <strong>Intermediate:</strong> Enhanced investigative and analytical skills for mid-level professionals.<br>
+             <strong>Advanced:</strong> Leadership-focused training with research and policy components.</p>
         </div>
       </div>
       <div class="attribute-card" tabindex="0">
         <div class="attribute-icon"><i class="fa-solid fa-hourglass-half"></i>
-          <div class="tooltip">6 months (reference): Short-term; 12 months: Balanced; 24 months: In-depth training.</div>
+          <div class="tooltip">6 months (ref): Short-term; 12 months: Balanced; 24 months: In-depth training.</div>
         </div>
         <div class="attribute-content">
           <h4>Duration</h4>
-          <p>6 months (ref): Quick deployment; 12 months: Comprehensive skill-building; 24 months: Advanced specialization with fieldwork.</p>
+          <p><strong>6 months (ref):</strong> Quick training for immediate field needs.<br>
+             <strong>12 months:</strong> Balanced program with comprehensive skill development.<br>
+             <strong>24 months:</strong> In-depth training with extensive fieldwork and specialization.</p>
         </div>
       </div>
       <div class="attribute-card" tabindex="0">
         <div class="attribute-icon"><i class="fa-solid fa-virus-covid"></i>
-          <div class="tooltip">Human (reference): Focus on human health; Animal: Veterinary epidemiology; One Health: Integrated human-animal-environment.</div>
+          <div class="tooltip">Human (ref): Human health focus; Animal: Veterinary epidemiology; One Health: Integrated approach.</div>
         </div>
         <div class="attribute-content">
           <h4>Focus</h4>
-          <p>Human (ref): Disease surveillance in people; Animal: Zoonotic threats; One Health: Holistic approach to pandemics.</p>
+          <p><strong>Human (ref):</strong> Disease surveillance and control in human populations.<br>
+             <strong>Animal:</strong> Focus on zoonotic diseases and veterinary epidemiology.<br>
+             <strong>One Health:</strong> Integrated human, animal, and environmental health approach.</p>
         </div>
       </div>
       <div class="attribute-card" tabindex="0">
         <div class="attribute-icon"><i class="fa-solid fa-laptop-medical"></i>
-          <div class="tooltip">In-person (reference): Traditional classroom; Hybrid: Mix of online/in-person; Online: Fully virtual.</div>
+          <div class="tooltip">In-person (ref): Classroom-based; Hybrid: Mixed delivery; Online: Fully virtual.</div>
         </div>
         <div class="attribute-content">
           <h4>Delivery Mode</h4>
-          <p>In-person (ref): Hands-on training; Hybrid: Flexible with some fieldwork; Online: Cost-effective but limited interaction.</p>
+          <p><strong>In-person (ref):</strong> Traditional hands-on training with direct mentorship.<br>
+             <strong>Hybrid:</strong> Combines online learning with in-person fieldwork.<br>
+             <strong>Online:</strong> Cost-effective virtual training with limited interaction.</p>
         </div>
       </div>
       <div class="attribute-card" tabindex="0">
         <div class="attribute-icon"><i class="fa-solid fa-users"></i>
-          <div class="tooltip">Scalable from 200 to 1500 trainees annually, affecting costs and impact.</div>
+          <div class="tooltip">200–1500 trainees/year: Scales program impact and costs.</div>
         </div>
         <div class="attribute-content">
           <h4>Annual Capacity</h4>
-          <p>200–1500 trainees/year: Determines program scale; higher capacity increases costs but amplifies benefits.</p>
+          <p><strong>200–1500 trainees/year:</strong> Adjustable scale; higher capacity increases costs but amplifies health outcomes and benefits.</p>
         </div>
       </div>
       <div class="attribute-card" tabindex="0">
         <div class="attribute-icon"><i class="fa-solid fa-stopwatch"></i>
-          <div class="tooltip">14 days (reference): Standard response; 7/3 days or 24 hours: Faster deployment capabilities.</div>
+          <div class="tooltip">14 days (ref): Standard response; 7/3 days, 24 hours: Faster deployment.</div>
         </div>
         <div class="attribute-content">
           <h4>Public Health Event Response Capacity</h4>
-          <p>14 days (ref): Baseline readiness; Shorter times improve outbreak control but require more resources.</p>
+          <p><strong>14 days (ref):</strong> Baseline outbreak response readiness.<br>
+             <strong>7/3 days, 24 hours:</strong> Faster response times improve outbreak control but require advanced logistics.</p>
         </div>
       </div>
       <div class="attribute-card" tabindex="0">
         <div class="attribute-icon"><i class="fa-solid fa-indian-rupee-sign"></i>
-          <div class="tooltip">₹30,000–₹90,000 per trainee per month, covering MoH direct costs.</div>
+          <div class="tooltip">₹30,000–₹90,000/trainee/month: MoH direct training costs.</div>
         </div>
         <div class="attribute-content">
           <h4>Cost to MoH per Trainee per Month</h4>
-          <p>₹30,000–₹90,000: Direct training costs; higher values reflect premium features like advanced equipment.</p>
+          <p><strong>₹30,000–₹90,000:</strong> Direct costs for training; higher costs reflect advanced resources or facilities.</p>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- Inputs -->
+  <!-- Inputs Tab -->
   <section id="inputsTab" class="tabcontent" tabindex="0">
     <div class="input-card">
-      <h2>Scenario Inputs</h2>
-      <p>Adjust the following parameters to define your FETP scenario. Selections and sliders allow customization. Warnings will appear for potentially unrealistic combinations (e.g., fully online advanced programs). After input, click 'Calculate & View Results' to populate other tabs.</p>
+      <h2>Configure FETP Scenario</h2>
+      <p>Use this tab to define your FETP program scenario. Select attribute levels and adjust sliders to customize the program’s scale, cost, and timeline. Warnings will highlight unrealistic combinations (e.g., fully online advanced programs). Click 'Calculate & View Results' to generate outputs across other tabs.</p>
 
       <form id="scenarioForm" onsubmit="return false;">
         <div class="input-cards">
           <div class="input-level-card">
             <h3>Program Type <span class="reference">(Frontline)</span></h3>
-            <p>Select the training level; advanced types increase costs and WTP.</p>
+            <p>Choose the training level; advanced programs increase costs and stakeholder WTP.</p>
             <div class="options">
               <label><input type="radio" name="ptype" value="frontline" checked> Frontline</label>
               <label><input type="radio" name="ptype" value="intermediate"> Intermediate</label>
@@ -154,7 +164,7 @@
 
           <div class="input-level-card">
             <h3>Duration <span class="reference">(6 months)</span></h3>
-            <p>Longer durations enhance skills but raise opportunity costs.</p>
+            <p>Longer durations enhance skills but increase opportunity costs and resource needs.</p>
             <div class="options">
               <label><input type="radio" name="duration" value="6" checked> 6 months</label>
               <label><input type="radio" name="duration" value="12"> 12 months</label>
@@ -164,7 +174,7 @@
 
           <div class="input-level-card">
             <h3>Focus <span class="reference">(Human)</span></h3>
-            <p>One Health integrates sectors for broader impact on zoonoses.</p>
+            <p>One Health integrates human, animal, and environmental health for broader impact.</p>
             <div class="options">
               <label><input type="radio" name="focus" value="human" checked> Human</label>
               <label><input type="radio" name="focus" value="animal"> Animal</label>
@@ -174,7 +184,7 @@
 
           <div class="input-level-card">
             <h3>Delivery Mode <span class="reference">(In-person)</span></h3>
-            <p>Online reduces costs but may lower endorsement for hands-on programs.</p>
+            <p>Online delivery reduces costs but may lower endorsement for hands-on training needs.</p>
             <div class="options">
               <label><input type="radio" name="mode" value="inperson" checked> In-person</label>
               <label><input type="radio" name="mode" value="hybrid"> Hybrid</label>
@@ -184,7 +194,7 @@
 
           <div class="input-level-card">
             <h3>Response Capacity <span class="reference">(14 days)</span></h3>
-            <p>Faster response boosts WTP by improving outbreak management.</p>
+            <p>Faster response times improve outbreak management and increase WTP.</p>
             <div class="options">
               <label><input type="radio" name="resp" value="14" checked> 14 days</label>
               <label><input type="radio" name="resp" value="7"> 7 days</label>
@@ -194,19 +204,19 @@
           </div>
 
           <div class="input-level-card">
-            <h3>Trainees / Year</h3>
-            <p>Scale the program size; affects total costs and benefits proportionally.</p>
+            <h3>Trainees per Year</h3>
+            <p>Adjust program scale; larger cohorts increase costs and potential benefits.</p>
             <div class="options slider-option">
-              <label for="capSlider"><i class="fa-solid fa-users"></i> <span id="capLabel">200</span></label>
+              <label for="capSlider"><i class="fa-solid fa-users"></i> <span id="capLabel">200</span> trainees</label>
               <input type="range" id="capSlider" min="200" max="1500" step="50" value="200" />
             </div>
           </div>
 
           <div class="input-level-card">
-            <h3>₹ / Trainee / Month (MoH)</h3>
-            <p>Direct MoH cost per trainee; higher values decrease endorsement.</p>
+            <h3>₹ per Trainee per Month (MoH)</h3>
+            <p>Direct Ministry of Health (MoH) training costs; higher values may reduce endorsement.</p>
             <div class="options slider-option">
-              <label for="costSlider"><i class="fa-solid fa-indian-rupee-sign"></i> <span id="costLabel">30,000</span></label>
+              <label for="costSlider"><i class="fa-solid fa-indian-rupee-sign"></i> ₹<span id="costLabel">30,000</span></label>
               <input type="range" id="costSlider" min="30000" max="90000" step="1000" value="30000" />
             </div>
           </div>
@@ -215,26 +225,26 @@
             <h3>Stakeholders Represented
               <span class="info-container">
                 <button type="button" class="info-button" aria-label="Number of stakeholders aggregated"><i class="fa-solid fa-circle-info"></i></button>
-                <span class="tooltip-text">Scales total WTP; set to 1 for per-respondent values or higher to represent broader groups.</span>
+                <span class="tooltip-text">Number of stakeholders whose preferences scale the total WTP. Set to 1 for individual respondent values or higher for aggregated groups.</span>
               </span>
             </h3>
-            <p>Number of stakeholders whose preferences are aggregated in WTP calculations.</p>
+            <p>Defines the population whose preferences are considered in WTP calculations.</p>
             <div class="options slider-option">
-              <label for="stakeSlider"><i class="fa-solid fa-people-group"></i> <span id="stakeLabel">500</span></label>
+              <label for="stakeSlider"><i class="fa-solid fa-people-group"></i> <span id="stakeLabel">500</span> stakeholders</label>
               <input type="range" id="stakeSlider" min="1" max="2000" step="1" value="500" />
             </div>
           </div>
 
           <div class="input-level-card">
-            <h3>Cohorts / Year & Horizon
+            <h3>Cohorts per Year & Horizon
               <span class="info-container">
-                <button type="button" class="info-button" aria-label="Explanation"><i class="fa-solid fa-circle-info"></i></button>
-                <span class="tooltip-text">Cohorts/year: Number of training batches annually. Horizon: Evaluation period in years. Discount rate: Annual rate for present value calculations.</span>
+                <button type="button" class="info-button" aria-label="Cohorts and horizon explanation"><i class="fa-solid fa-circle-info"></i></button>
+                <span class="tooltip-text">Cohorts/year: Number of training batches annually. Horizon: Years for cost-benefit evaluation. Discount rate: Annual rate for present-value calculations.</span>
               </span>
             </h3>
-            <p>Define program rollout and evaluation timeframe for present-value computations.</p>
+            <p>Specify training frequency and evaluation period for present-value analysis.</p>
             <div class="form-mini">
-              <label>Cohorts / year <input type="number" id="cohortsYear" min="1" max="4" step="1" value="1"></label>
+              <label>Cohorts/year <input type="number" id="cohortsYear" min="1" max="4" step="1" value="1"></label>
               <label>Years horizon <input type="number" id="yearsHorizon" min="1" max="10" step="1" value="5"></label>
               <label>Discount rate (%) <input type="number" id="discRate" min="0" step="0.5" value="3"></label>
             </div>
@@ -248,7 +258,7 @@
         </div>
       </form>
 
-      <!-- Modal -->
+      <!-- Results Modal -->
       <div id="resultModal" class="modal" aria-modal="true" role="dialog">
         <div class="modal-content">
           <span class="close-button" id="closeModalBtn">×</span>
@@ -258,12 +268,14 @@
     </div>
   </section>
 
-  <!-- WTP -->
+  <!-- WTP Tab -->
   <section id="wtpTab" class="tabcontent" tabindex="0">
     <div class="calculation-info">
-      <h4>Marginal Willingness-to-Pay (WTP) in ₹</h4>
-      <p>Marginal WTP represents the additional value stakeholders place on each attribute level relative to the reference. Total benefit = (Sum of marginal WTP for chosen levels) × endorsement rate × number of stakeholders. Use this tab to understand preference-driven valuations. Click 'Show Chart' after calculating.</p>
-      <div class="buttons-row"><button id="showWTP">Show Chart</button></div>
+      <h2>Willingness-to-Pay (WTP) Analysis</h2>
+      <p><strong>Purpose:</strong> Evaluate stakeholder valuation of FETP program attributes. Marginal WTP reflects the additional value of each attribute level relative to the reference. Total WTP is calculated as: (Sum of marginal WTP for selected levels) × endorsement rate × stakeholders.</p>
+      <p><strong>Usage:</strong> After configuring a scenario in the Inputs tab, click 'Show Chart' to visualize marginal WTP for each attribute level. Use this to understand which program features stakeholders value most.</p>
+      <p><strong>Note:</strong> Results require a calculated scenario. If no results appear, return to the Inputs tab and click 'Calculate & View Results'.</p>
+      <div class="buttons-row"><button id="showWTP">Show WTP Chart</button></div>
       <div class="chart-grid">
         <div class="chart-box fixed-height">
           <h3>Marginal WTP (₹)</h3>
@@ -273,12 +285,14 @@
     </div>
   </section>
 
-  <!-- Endorsement -->
+  <!-- Endorsement Tab -->
   <section id="endorseTab" class="tabcontent" tabindex="0">
     <div class="calculation-info">
-      <h4>Predicted Endorsement Rate</h4>
-      <p>Endorsement probability is calculated using a logit model based on DCE coefficients. It estimates the percentage of stakeholders who would support the program configuration. Higher utility from attributes increases endorsement. Click 'Show Plot' after calculating.</p>
-      <div class="buttons-row"><button id="showEndorse">Show Plot</button></div>
+      <h2>Endorsement Rate Analysis</h2>
+      <p><strong>Purpose:</strong> Predict the percentage of stakeholders likely to support the configured FETP program based on a logit model using DCE coefficients. Higher utility from selected attributes increases endorsement probability.</p>
+      <p><strong>Usage:</strong> After calculating a scenario, click 'Show Plot' to view the endorsement rate as a percentage. This helps gauge stakeholder acceptance of the program design.</p>
+      <p><strong>Note:</strong> Requires a calculated scenario from the Inputs tab. Coefficients are placeholders; update with actual DCE data for accuracy.</p>
+      <div class="buttons-row"><button id="showEndorse">Show Endorsement Plot</button></div>
       <div class="chart-grid">
         <div class="chart-box fixed-height">
           <h3>Endorse vs Not Endorse</h3>
@@ -288,11 +302,13 @@
     </div>
   </section>
 
-  <!-- Cost-Benefit -->
+  <!-- Cost-Benefit Tab -->
   <section id="costsTab" class="tabcontent" tabindex="0">
     <div class="calculation-info">
-      <h4>₹ Cost–Benefit Analysis</h4>
-      <p>Compares present-value costs (fixed, per-trainee, MoH) against monetized benefits from WTP. Includes BCR and net benefit. Toggle breakdown for detailed cost components. Results update after calculation.</p>
+      <h2>Cost–Benefit Analysis (₹)</h2>
+      <p><strong>Purpose:</strong> Compare present-value costs (fixed, per-trainee, and MoH contributions) against monetized benefits derived from WTP. Outputs include Benefit-Cost Ratio (BCR) and net benefit to assess financial viability.</p>
+      <p><strong>Usage:</strong> Results display automatically after calculation. Click 'Toggle Cost Breakdown' to view detailed cost components (e.g., staff, equipment). Use this to identify cost drivers and optimize program design.</p>
+      <p><strong>Note:</strong> Requires a calculated scenario. Costs are adjusted by attribute-specific multipliers.</p>
       <div id="costsBenefitsResults"></div>
       <div class="buttons-row">
         <button type="button" id="toggleBreakdown">Toggle Cost Breakdown</button>
@@ -301,11 +317,13 @@
     </div>
   </section>
 
-  <!-- QALY -->
+  <!-- QALY Tab -->
   <section id="qalyTab" class="tabcontent" tabindex="0">
     <div class="calculation-info">
-      <h4>QALY-Based Cost-Effectiveness</h4>
-      <p>Estimates present-value QALYs gained from trained epidemiologists. Computes ICER and compares to user-selected thresholds. Adjust QALY per trainee and threshold, then click 'Run QALY Analysis'.</p>
+      <h2>QALY-Based Cost-Effectiveness</h2>
+      <p><strong>Purpose:</strong> Estimate health impacts in Quality-Adjusted Life Years (QALYs) gained from trained epidemiologists. The Incremental Cost-Effectiveness Ratio (ICER) compares costs to QALYs against user-defined thresholds to assess cost-effectiveness.</p>
+      <p><strong>Usage:</strong> Adjust QALY gain per trainee and threshold values, then click 'Run QALY Analysis' to view results and a chart comparing ICER to the threshold. Use this to evaluate health-economic value.</p>
+      <p><strong>Note:</strong> Requires a calculated scenario. Default QALY gain is 0.03/trainee/year; adjust based on context.</p>
       <div class="form-grid">
         <div class="form-item">
           <label for="qalyPerTrainee">QALY gain per trainee (annual)</label>
@@ -331,11 +349,13 @@
     </div>
   </section>
 
-  <!-- PSA -->
+  <!-- PSA Tab -->
   <section id="psaTab" class="tabcontent" tabindex="0">
     <div class="calculation-info">
-      <h4>Probabilistic Sensitivity Analysis (PSA)</h4>
-      <p>Simulates uncertainty in costs, WTP, and endorsement using Monte Carlo methods (truncated normal distributions). Reports means, 95% CIs, and probabilities for BCR >1 and ICER < threshold. Adjust SE percentages and iterations, then click 'Run PSA'.</p>
+      <h2>Probabilistic Sensitivity Analysis (PSA)</h2>
+      <p><strong>Purpose:</strong> Assess the robustness of results under uncertainty using Monte Carlo simulations. Applies truncated normal distributions to costs, WTP, and endorsement rates, reporting means, 95% confidence intervals, and probabilities (e.g., P(BCR>1)).</p>
+      <p><strong>Usage:</strong> Adjust standard error percentages (SE%) for costs, WTP, and endorsement, and set iteration count. Click 'Run PSA' to generate results and visualize BCR and ICER distributions.</p>
+      <p><strong>Note:</strong> Requires a calculated scenario. Higher iterations improve accuracy but increase computation time.</p>
       <div class="form-grid">
         <div class="form-item"><label>SE % Costs <input type="number" id="seCost" value="10" min="0" step="1"></label></div>
         <div class="form-item"><label>SE % WTP <input type="number" id="seWTP" value="10" min="0" step="1"></label></div>
@@ -357,35 +377,38 @@
     </div>
   </section>
 
-  <!-- Methods -->
+  <!-- Methods Tab -->
   <section id="methodsTab" class="tabcontent" tabindex="0">
     <div class="calculation-info">
-      <h4>Methods (Detailed Overview)</h4>
+      <h2>Methodology</h2>
+      <p><strong>Overview:</strong> This section details the computational methods and assumptions underlying the tool’s analyses. Calculations use placeholder coefficients and should be updated with actual DCE and cost data for real-world application.</p>
       <details open>
-        <summary><strong>Costs</strong></summary>
-        <p>Present-value (PV) costs are discounted over the horizon. Formula: PV Cost = Σ_t [(Fixed costs × multipliers) + (Per-trainee costs × endorsed trainees) + (MoH training cost)] / (1 + discount rate)^t. Multipliers adjust for program type, duration, etc.</p>
+        <summary><strong>Cost Calculations</strong></summary>
+        <p>Costs are calculated as present value (PV) over the specified horizon: PV Cost = Σ_t [(Fixed costs × multipliers) + (Per-trainee costs × endorsed trainees) + (MoH training cost)] / (1 + discount rate)^t. Multipliers adjust for program type, duration, focus, delivery mode, and response capacity.</p>
       </details>
       <details>
-        <summary><strong>Benefits (₹)</strong></summary>
-        <p>Total Benefit = (Sum of marginal WTP for selected levels) × endorsement rate × stakeholders. Marginal WTP derived from DCE marginal rates of substitution.</p>
+        <summary><strong>Benefits (WTP)</strong></summary>
+        <p>Total benefit = (Sum of marginal WTP for selected attribute levels) × endorsement rate × number of stakeholders. Marginal WTP is derived from DCE marginal rates of substitution, reflecting stakeholder preferences.</p>
       </details>
       <details>
-        <summary><strong>QALYs</strong></summary>
-        <p>PV QALYs = Σ_t [capacity × cohorts/year × endorsement rate × QALY/trainee] / (1 + r)^t. ICER = PV Cost / PV QALYs. Compared to thresholds like ₹300,000/QALY (adjustable).</p>
+        <summary><strong>QALYs and ICER</strong></summary>
+        <p>PV QALYs = Σ_t [capacity × cohorts/year × endorsement rate × QALY/trainee] / (1 + discount rate)^t. ICER = PV Cost / PV QALYs, compared to thresholds (e.g., ₹300,000/QALY) to determine cost-effectiveness.</p>
       </details>
       <details>
-        <summary><strong>PSA</strong></summary>
-        <p>Monte Carlo simulation with user-defined SE% for inputs. Draws from truncated normal distributions (e.g., endorsement 0.01–0.99). Outputs include mean, 95% CI for BCR & ICER, and probability metrics.</p>
+        <summary><strong>Probabilistic Sensitivity Analysis (PSA)</strong></summary>
+        <p>PSA uses Monte Carlo simulations with truncated normal distributions for costs, WTP, and endorsement (e.g., endorsement constrained to 0.01–0.99). Outputs include mean, 95% CI for BCR and ICER, and probabilities like P(BCR>1).</p>
       </details>
-      <p><strong>Assumptions:</strong> Linear utility in logit; constant QALY gain; costs scaled by multipliers. Update coefficients with actual DCE data.</p>
+      <p><strong>Assumptions:</strong> Linear utility in logit model; constant QALY gain per trainee; costs scaled by attribute-specific multipliers. Update coefficients with actual data for accuracy.</p>
     </div>
   </section>
 
-  <!-- Saved Scenarios -->
+  <!-- Saved Scenarios Tab -->
   <section id="scenariosTab" class="tabcontent" tabindex="0">
     <div class="calculation-info">
-      <h4>Saved Scenarios</h4>
-      <p>Save calculated scenarios for comparison. Table shows key parameters and outcomes. Export all to PDF for reports. Click 'Save Current Scenario' after calculating.</p>
+      <h2>Saved Scenarios</h2>
+      <p><strong>Purpose:</strong> Store and compare multiple FETP scenarios. The table displays key parameters and outcomes (e.g., endorsement, WTP, costs, BCR, ICER) for each saved scenario.</p>
+      <p><strong>Usage:</strong> After calculating a scenario in the Inputs tab, click 'Save Current Scenario' to store it. Use 'Export to PDF' to generate a report of all saved scenarios for sharing with stakeholders.</p>
+      <p><strong>Note:</strong> Scenarios are saved in browser memory (not persistent across sessions). Ensure calculations are complete before saving.</p>
       <div class="buttons-row">
         <button id="saveScenarioBtn">Save Current Scenario</button>
         <button id="exportPDFBtn">Export to PDF</button>
@@ -393,11 +416,11 @@
       <div class="table-container">
         <table id="scenarioTable">
           <thead>
-          <tr>
-            <th>Name</th><th>Type</th><th>Dur</th><th>Focus</th><th>Mode</th><th>Resp</th>
-            <th>Cap</th><th>₹/T/M</th><th>Stakeh.</th><th>C/Yr</th><th>Years</th><th>Disc%</th>
-            <th>Endorse</th><th>WTP</th><th>Cost</th><th>BCR</th><th>Net</th><th>ICER</th>
-          </tr>
+            <tr>
+              <th>Name</th><th>Type</th><th>Dur</th><th>Focus</th><th>Mode</th><th>Resp</th>
+              <th>Cap</th><th>₹/T/M</th><th>Stakeh.</th><th>C/Yr</th><th>Years</th><th>Disc%</th>
+              <th>Endorse</th><th>WTP</th><th>Cost</th><th>BCR</th><th>Net</th><th>ICER</th>
+            </tr>
           </thead>
           <tbody></tbody>
         </table>
@@ -406,7 +429,7 @@
   </section>
 
   <footer>
-    <p>© 2025 FETP India Decision Aid Tool. The University of Newcastle, Australia. All rights reserved.</p>
+    <p>© 2025 FETP India Decision Aid Tool. Developed by University of Newcastle, Australia. All rights reserved.</p>
   </footer>
 </div>
 
