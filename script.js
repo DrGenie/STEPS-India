@@ -1,7 +1,6 @@
-
 /* ===================================================
    STEPS FETP India Decision Aid
-   Script with interactive DCE sensitivity tabnb
+   Script with interactive DCE sensitivity tab
    =================================================== */
 
 /* ===========================
@@ -44,13 +43,13 @@ const LC2_COEFS = {
     ascOptOut: -2.543,
     tier: {
         frontline: 0.0,
-        intermediate: 0.0,
+        intermediate: 0.087,
         advanced: 0.422
     },
     career: {
         certificate: 0.0,
-        uniqual: 0.0,
-        career_path: 0.0
+        uniqual: -0.024,
+        career_path: -0.123
     },
     mentorship: {
         low: 0.0,
@@ -59,8 +58,8 @@ const LC2_COEFS = {
     },
     delivery: {
         blended: 0.0,
-        inperson: 0.0,
-        online: 0.0
+        inperson: -0.017,
+        online: -0.700
     },
     response: {
         30: 0.0,
@@ -68,6 +67,41 @@ const LC2_COEFS = {
         7: 0.504
     },
     costPerThousand: -0.001
+};
+
+/* Conservative / resister latent class.
+   This class is used for endorsement, but its cost coefficient
+   is not used for WTP in the CBA, as it is small and not
+   statistically reliable. */
+const LC1_COEFS = {
+    ascProgram: 0.181,
+    ascOptOut: 1.222,
+    tier: {
+        frontline: 0.0,
+        intermediate: 0.070,
+        advanced: 0.045
+    },
+    career: {
+        certificate: 0.0,
+        uniqual: 0.098,
+        career_path: -0.027
+    },
+    mentorship: {
+        low: 0.0,
+        medium: 0.327,
+        high: 0.636
+    },
+    delivery: {
+        blended: 0.0,
+        inperson: -0.476,
+        online: -0.798
+    },
+    response: {
+        30: 0.0,
+        15: 0.640,
+        7: 0.513
+    },
+    costPerThousand: 0.0001
 };
 
 /* ===========================
@@ -282,12 +316,20 @@ function computeNonCostUtility(cfg, coefs) {
     return uTier + uCareer + uMentor + uDelivery + uResponse;
 }
 
+/**
+ * Compute marginal willingness-to-pay per active attribute level.
+ *
+ * Internally this works in thousand INR per trainee per month using
+ * -beta_k / beta_cost, then converts to INR by multiplying by 1,000.
+ * The UI never shows these formulas; only the resulting values are used.
+ */
 function computeWtpComponents(cfg, coefs) {
     const betaCost = coefs.costPerThousand || 0;
     if (!betaCost) {
         return {
             totalPerTraineePerMonth: null,
-            components: null
+            components: null,
+            thousandUnits: null
         };
     }
 
@@ -297,28 +339,47 @@ function computeWtpComponents(cfg, coefs) {
     const betaDelivery = coefs.delivery[cfg.delivery] || 0;
     const betaResponse = coefs.response[cfg.response] || 0;
 
-    const tierWtp = -1000 * betaTier / betaCost;
-    const careerWtp = -1000 * betaCareer / betaCost;
-    const mentorshipWtp = -1000 * betaMentor / betaCost;
-    const deliveryWtp = -1000 * betaDelivery / betaCost;
-    const responseWtp = -1000 * betaResponse / betaCost;
+    const tierThousand = -betaTier / betaCost;
+    const careerThousand = -betaCareer / betaCost;
+    const mentorshipThousand = -betaMentor / betaCost;
+    const deliveryThousand = -betaDelivery / betaCost;
+    const responseThousand = -betaResponse / betaCost;
 
-    const total = tierWtp + careerWtp + mentorshipWtp + deliveryWtp + responseWtp;
+    const tierInr = tierThousand * 1000;
+    const careerInr = careerThousand * 1000;
+    const mentorshipInr = mentorshipThousand * 1000;
+    const deliveryInr = deliveryThousand * 1000;
+    const responseInr = responseThousand * 1000;
+
+    const totalThousand = tierThousand + careerThousand + mentorshipThousand + deliveryThousand + responseThousand;
+    const totalInr = totalThousand * 1000;
 
     return {
-        totalPerTraineePerMonth: total,
+        // INR per trainee per month
+        totalPerTraineePerMonth: totalInr,
         components: {
-            tier: tierWtp,
-            career: careerWtp,
-            mentorship: mentorshipWtp,
-            delivery: deliveryWtp,
-            response: responseWtp
+            tier: tierInr,
+            career: careerInr,
+            mentorship: mentorshipInr,
+            delivery: deliveryInr,
+            response: responseInr
+        },
+        // Thousand INR per trainee per month (not currently shown in UI, kept for internal use)
+        thousandUnits: {
+            total: totalThousand,
+            tier: tierThousand,
+            career: careerThousand,
+            mentorship: mentorshipThousand,
+            delivery: deliveryThousand,
+            response: responseThousand
         }
     };
 }
 
 function getModelCoefs(modelId) {
-    return modelId === "lc2" ? LC2_COEFS : MXL_COEFS;
+    if (modelId === "lc2") return LC2_COEFS;
+    if (modelId === "lc1") return LC1_COEFS;
+    return MXL_COEFS;
 }
 
 /* ===========================
@@ -361,6 +422,13 @@ function readConfigurationFromInputs() {
    Utility and endorsement
    =========================== */
 
+/**
+ * Compute utility difference between programme and opt out, endorsement
+ * probabilities, and WTP (where applicable).
+ *
+ * This function is the single point where discrete choice model
+ * coefficients are turned into endorsement and WTP measures.
+ */
 function computeEndorsementAndWtp(cfg, modelId) {
     const coefs = getModelCoefs(modelId);
     const designUtility = computeNonCostUtility(cfg, coefs);
@@ -557,6 +625,9 @@ function computeEpi(cfg, endorseProb) {
     const responseMultiplier = getResponseTimeMultiplier(cfg.response);
 
     const benefitGraduatesAllCohorts = graduatesAllCohorts * valuePerGrad;
+
+    // Base outbreak benefit over the planning horizon before applying
+    // response time multipliers.
     const benefitOutbreaksAllCohortsBase = outbreaksPerYearAllCohorts * horizon * valuePerOutbreak;
     const benefitOutbreaksAllCohorts = benefitOutbreaksAllCohortsBase * responseMultiplier;
 
@@ -580,9 +651,9 @@ function computeEpi(cfg, endorseProb) {
    DCE benefits & sensitivity
    =========================== */
 
-/* Endorsement override for sensitivity tab
-   - If user enters 70 treat as 70%
-   - If user enters 0.7 treat as 70%   */
+/* Endorsement override for sensitivity tab.
+   If the user enters 70 it is treated as 70%.
+   If the user enters 0.7 it is treated as 70%. */
 function getEndorsementRateForSensitivity(defaultRate) {
     let rate = defaultRate;
     const input =
@@ -600,9 +671,9 @@ function getEndorsementRateForSensitivity(defaultRate) {
     return rate;
 }
 
-/* DCE and EPI multipliers for the sensitivity tab
-   - Expect values in percent form (e.g. 100 = baseline) but
-     also allow direct multipliers between 0 and 2. */
+/* DCE and EPI multipliers for the sensitivity tab.
+   Values can be entered in percent form (100 = baseline)
+   or as direct multipliers between 0 and 2. */
 function getSensitivityScales() {
     function parseScale(id) {
         const el = document.getElementById(id);
@@ -618,11 +689,44 @@ function getSensitivityScales() {
     };
 }
 
-/* Compute DCE-based benefit profiles and simple CBA
-   options:
-     - useUiOverrides: if true, use sensitivity tab controls
-     - dceScale: multiplier for all DCE benefits
-     - epiScale: multiplier for outbreak benefits */
+/**
+ * Active benefit definition used for NPV/BCR in the sensitivity tab.
+ *  - "totalWtp": use total DCE-based WTP as the primary benefit.
+ *  - "effectiveWtp": use endorsement-adjusted WTP as the primary benefit.
+ * The epi toggle then controls whether outbreak benefits are added.
+ */
+function getBenefitDefinitionMode() {
+    const el = document.getElementById("dce-benefit-definition");
+    if (!el) return "totalWtp";
+    const val = (el.value || "").trim();
+    if (val === "effectiveWtp") return "effectiveWtp";
+    return "totalWtp";
+}
+
+/**
+ * Selected class filter for the sensitivity table.
+ *  - "all": show all classes
+ *  - "overall": overall mixed logit
+ *  - "supportive": supportive latent class
+ *  - "conservative": conservative/resister class
+ */
+function getSelectedDceClass() {
+    const el = document.getElementById("dce-class-selector");
+    if (!el) return "all";
+    const v = (el.value || "").trim();
+    if (["all", "overall", "supportive", "conservative"].includes(v)) {
+        return v;
+    }
+    return "all";
+}
+
+/**
+ * Compute DCE-based benefit profiles and simple CBA metrics for each
+ * preference model (overall MXL, supportive LC class, conservative LC class).
+ *
+ * Everything is kept internal; the UI only receives rounded aggregates.
+ * No formulas are exposed in the interface.
+ */
 function computeDceCbaProfiles(cfg, costs, epi, options) {
     const opts = options || {};
     const useUiOverrides = !!opts.useUiOverrides;
@@ -632,23 +736,41 @@ function computeDceCbaProfiles(cfg, costs, epi, options) {
     const durationMonths = costs.durationMonths || 0;
     const trainees = cfg.traineesPerCohort || 0;
     const cohorts = cfg.numberOfCohorts || 0;
+
     const totalCostAllCohorts = costs.totalEconomicCostPerCohort * cohorts;
 
+    // Outbreak-related monetary benefit from the epi module, scaled
+    // by the epi sensitivity multiplier.
     const epiOutbreakBenefitAllCohorts =
         (epi.benefitOutbreaksAllCohorts || 0) * epiScale;
 
     const overallUtil = computeEndorsementAndWtp(cfg, "mxl");
     const supportiveUtil = computeEndorsementAndWtp(cfg, "lc2");
+    const conservativeUtil = computeEndorsementAndWtp(cfg, "lc1");
 
-    function buildProfile(label, utilObj) {
-        const wtpPerTraineePerMonth = utilObj.wtpConfig;
+    /**
+     * Build a per-class WTP and CBA profile.
+     *
+     * allowWtp is set to false for the conservative class so that its
+     * cost coefficient is not used to infer monetary WTP. This keeps
+     * the handling of cost-insensitive groups conservative.
+     */
+    function buildProfile(label, utilObj, allowWtp) {
+        const baseWtpPerTraineePerMonth =
+            allowWtp && typeof utilObj.wtpConfig === "number"
+                ? utilObj.wtpConfig
+                : 0;
+
         const components = utilObj.wtpComponents || {};
-        const wtpRespPerTraineePerMonth =
-            typeof components.response === "number" ? components.response : 0;
+        const baseWtpRespPerTraineePerMonth =
+            allowWtp && typeof components.response === "number"
+                ? components.response
+                : 0;
 
-        const wtpPerCohort = (wtpPerTraineePerMonth || 0) * trainees * durationMonths;
+        const wtpPerCohort =
+            baseWtpPerTraineePerMonth * trainees * durationMonths;
         const wtpRespPerCohort =
-            (wtpRespPerTraineePerMonth || 0) * trainees * durationMonths;
+            baseWtpRespPerTraineePerMonth * trainees * durationMonths;
 
         const baseWtpAllCohorts = wtpPerCohort * cohorts;
         const baseWtpRespAllCohorts = wtpRespPerCohort * cohorts;
@@ -661,29 +783,43 @@ function computeDceCbaProfiles(cfg, costs, epi, options) {
             ? getEndorsementRateForSensitivity(baseRate)
             : baseRate;
 
+        // Endorsement-adjusted benefit from the DCE.
         const effectiveBenefitAllCohorts = wtpAllCohorts * endorsementRate;
 
+        // DCE-only NPV/BCR (using total WTP as the benefit stream).
         const npvDce = wtpAllCohorts - totalCostAllCohorts;
         const bcrDce =
             totalCostAllCohorts > 0 ? wtpAllCohorts / totalCostAllCohorts : null;
 
+        // DCE-only NPV/BCR using endorsement-adjusted WTP.
         const npvEffective = effectiveBenefitAllCohorts - totalCostAllCohorts;
         const bcrEffective =
             totalCostAllCohorts > 0
                 ? effectiveBenefitAllCohorts / totalCostAllCohorts
                 : null;
 
+        // Combined benefits: total WTP + epi outbreak benefits.
         const combinedBenefit = wtpAllCohorts + epiOutbreakBenefitAllCohorts;
         const npvCombined = combinedBenefit - totalCostAllCohorts;
         const bcrCombined =
             totalCostAllCohorts > 0 ? combinedBenefit / totalCostAllCohorts : null;
 
+        // Combined benefits using endorsement-adjusted WTP + epi.
+        const combinedEffectiveBenefit =
+            effectiveBenefitAllCohorts + epiOutbreakBenefitAllCohorts;
+        const npvCombinedEffective =
+            combinedEffectiveBenefit - totalCostAllCohorts;
+        const bcrCombinedEffective =
+            totalCostAllCohorts > 0
+                ? combinedEffectiveBenefit / totalCostAllCohorts
+                : null;
+
         return {
             label,
-            wtpPerTraineePerMonth,
+            wtpPerTraineePerMonth: baseWtpPerTraineePerMonth,
             wtpPerCohort,
             wtpAllCohorts,
-            wtpRespPerTraineePerMonth,
+            wtpRespPerTraineePerMonth: baseWtpRespPerTraineePerMonth,
             wtpRespPerCohort,
             wtpRespAllCohorts,
             endorsementRate,
@@ -694,19 +830,117 @@ function computeDceCbaProfiles(cfg, costs, epi, options) {
             bcrEffective,
             combinedBenefit,
             npvCombined,
-            bcrCombined
+            bcrCombined,
+            combinedEffectiveBenefit,
+            npvCombinedEffective,
+            bcrCombinedEffective
         };
     }
 
     const profiles = {
-        overall: buildProfile("Overall (mixed logit)", overallUtil),
-        supportive: buildProfile("Supportive class (latent class)", supportiveUtil)
+        overall: buildProfile("Overall (mixed logit)", overallUtil, true),
+        supportive: buildProfile("Supportive class (latent class)", supportiveUtil, true),
+        // Conservative/resister class: endorsement only, WTP set to zero.
+        conservative: buildProfile("Conservative / resister class", conservativeUtil, false)
+    };
+
+    // Scenario-level summary object used for exports and any
+    // higher-level reporting needs.
+    const scenario = {
+        id: cfg.scenarioName || "current",
+        label: cfg.scenarioName || "Current configuration",
+        totalCostInr: totalCostAllCohorts,
+        B_s_WTP_overall: profiles.overall.wtpAllCohorts,
+        B_s_WTP_response_overall: profiles.overall.wtpRespAllCohorts,
+        B_s_WTP_supporters: profiles.supportive.wtpAllCohorts,
+        B_s_WTP_conservative: profiles.conservative.wtpAllCohorts,
+        B_s_epi: epiOutbreakBenefitAllCohorts,
+        endorsement_overall: profiles.overall.endorsementRate,
+        endorsement_supporters: profiles.supportive.endorsementRate,
+        endorsement_conservative: profiles.conservative.endorsementRate,
+        NPV_DCE_overall: profiles.overall.npvDce,
+        BCR_DCE_overall: profiles.overall.bcrDce,
+        NPV_total_overall: profiles.overall.npvCombined,
+        BCR_total_overall: profiles.overall.bcrCombined,
+        NPV_DCE_supporters: profiles.supportive.npvDce,
+        BCR_DCE_supporters: profiles.supportive.bcrDce,
+        NPV_total_supporters: profiles.supportive.npvCombined,
+        BCR_total_supporters: profiles.supportive.bcrCombined,
+        NPV_total_conservative: profiles.conservative.npvCombined,
+        BCR_total_conservative: profiles.conservative.bcrCombined
     };
 
     return {
         profiles,
         totalCostAllCohorts,
-        epiOutbreakBenefitAllCohorts
+        epiOutbreakBenefitAllCohorts,
+        scenario
+    };
+}
+
+/**
+ * Given a profile and the UI settings (epi toggle and benefit definition),
+ * compute the BCR and NPV that should be displayed and exported.
+ */
+function getActiveCbaValues(profile, epiActive, benefitMode) {
+    if (!profile) {
+        return { bcr: null, npv: null };
+    }
+
+    if (benefitMode === "effectiveWtp") {
+        if (epiActive) {
+            return {
+                bcr: profile.bcrCombinedEffective,
+                npv: profile.npvCombinedEffective
+            };
+        }
+        return {
+            bcr: profile.bcrEffective,
+            npv: profile.npvEffective
+        };
+    }
+
+    // Default: benefitMode === "totalWtp"
+    if (epiActive) {
+        return {
+            bcr: profile.bcrCombined,
+            npv: profile.npvCombined
+        };
+    }
+    return {
+        bcr: profile.bcrDce,
+        npv: profile.npvDce
+    };
+}
+
+/**
+ * Package all sensitivity inputs and DCE results in one place.
+ * Both the renderer and export functions use this helper so that
+ * the table and the downloaded files always match.
+ */
+function getSensitivityComputation(results) {
+    if (!results) return null;
+
+    const { dceScale, epiScale: rawEpiScale } = getSensitivityScales();
+
+    const epiToggle = document.getElementById("dce-epi-benefit-toggle");
+    const epiActive = !epiToggle || epiToggle.checked;
+    const epiScale = epiActive ? rawEpiScale : 0;
+
+    const dceCba = computeDceCbaProfiles(results.cfg, results.costs, results.epi, {
+        useUiOverrides: true,
+        dceScale,
+        epiScale
+    });
+
+    const benefitMode = getBenefitDefinitionMode();
+    const classFilter = getSelectedDceClass();
+
+    return {
+        dceCba,
+        epiActive,
+        benefitMode,
+        classFilter
     };
 }
 
@@ -1253,46 +1487,44 @@ function updateNationalSimulation(results) {
    Sensitivity tab (interactive)
    =========================== */
 
+/**
+ * Render the DCE benefits / sensitivity table and summary cards.
+ * This uses the same internal computation used by the export
+ * functions so that on-screen numbers and exported numbers match.
+ */
 function updateSensitivityTab(results) {
     const tableBody = document.querySelector("#dce-sensitivity-table tbody");
     if (!tableBody || !results) return;
 
-    // Read sensitivity multipliers
-    const { dceScale, epiScale: rawEpiScale } = getSensitivityScales();
+    const comp = getSensitivityComputation(results);
+    if (!comp) return;
 
-    const epiToggle = document.getElementById("dce-epi-benefit-toggle");
-    const epiActive = !epiToggle || epiToggle.checked;
-    const epiScale = epiActive ? rawEpiScale : 0;
-
-    const dceCba = computeDceCbaProfiles(results.cfg, results.costs, results.epi, {
-        useUiOverrides: true,
-        dceScale,
-        epiScale
-    });
-
+    const { dceCba, epiActive, benefitMode, classFilter } = comp;
     const { profiles, totalCostAllCohorts, epiOutbreakBenefitAllCohorts } = dceCba;
 
     tableBody.innerHTML = "";
 
-    if (!profiles) return;
-
     const costText = formatCurrency(totalCostAllCohorts, state.currency);
+    const epiBenefitValue = epiActive ? epiOutbreakBenefitAllCohorts : 0;
     const epiBenefitText = epiActive
         ? formatCurrency(epiOutbreakBenefitAllCohorts, state.currency)
         : "—";
 
-    Object.keys(profiles).forEach(key => {
+    const profileOrder = ["overall", "supportive", "conservative"];
+
+    profileOrder.forEach(key => {
         const p = profiles[key];
+        if (!p) return;
+
+        if (classFilter !== "all" && classFilter !== key) {
+            return;
+        }
+
+        const active = getActiveCbaValues(p, epiActive, benefitMode);
+
         const tr = document.createElement("tr");
 
-        const bcrDce = p.bcrDce;
-        const npvDce = p.npvDce;
-
-        const bcrCombined = epiActive ? p.bcrCombined : p.bcrDce;
-        const npvCombined = epiActive ? p.npvCombined : p.npvDce;
-
-        const bcrEffective = p.bcrEffective;
-        const npvEffective = p.npvEffective;
+        const endorsementPct = p.endorsementRate * 100;
 
         tr.innerHTML = `
             <td>${p.label}</td>
@@ -1300,12 +1532,10 @@ function updateSensitivityTab(results) {
             <td>${formatCurrency(p.wtpAllCohorts, state.currency)}</td>
             <td>${formatCurrency(p.wtpRespAllCohorts, state.currency)}</td>
             <td>${epiBenefitText}</td>
-            <td>${(bcrDce !== null && isFinite(bcrDce)) ? bcrDce.toFixed(2) : "-"}</td>
-            <td>${formatCurrency(npvDce, state.currency)}</td>
-            <td>${(bcrCombined !== null && isFinite(bcrCombined)) ? bcrCombined.toFixed(2) : "-"}</td>
-            <td>${formatCurrency(npvCombined, state.currency)}</td>
-            <td>${(bcrEffective !== null && isFinite(bcrEffective)) ? bcrEffective.toFixed(2) : "-"}</td>
-            <td>${formatCurrency(npvEffective, state.currency)}</td>
+            <td>${formatPercent(endorsementPct, 1)}</td>
+            <td>${formatCurrency(p.effectiveBenefitAllCohorts, state.currency)}</td>
+            <td>${(active.bcr !== null && isFinite(active.bcr)) ? active.bcr.toFixed(2) : "-"}</td>
+            <td>${formatCurrency(active.npv, state.currency)}</td>
         `;
         tableBody.appendChild(tr);
     });
@@ -1321,6 +1551,8 @@ function updateSensitivityTab(results) {
     const sensSummary = document.getElementById("dce-sensitivity-summary");
     if (sensSummary && profiles.overall) {
         const p = profiles.overall;
+        const active = getActiveCbaValues(p, epiActive, benefitMode);
+
         sensSummary.innerHTML = `
             <div class="sens-summary-card">
                 <div class="sens-summary-label">Overall DCE benefit (all cohorts)</div>
@@ -1331,12 +1563,12 @@ function updateSensitivityTab(results) {
                 <div class="sens-summary-value">${formatCurrency(p.effectiveBenefitAllCohorts, state.currency)}</div>
             </div>
             <div class="sens-summary-card">
-                <div class="sens-summary-label">BCR (DCE benefit only)</div>
-                <div class="sens-summary-value">${p.bcrDce !== null && isFinite(p.bcrDce) ? p.bcrDce.toFixed(2) : "-"}</div>
+                <div class="sens-summary-label">Active BCR</div>
+                <div class="sens-summary-value">${active.bcr !== null && isFinite(active.bcr) ? active.bcr.toFixed(2) : "-"}</div>
             </div>
             <div class="sens-summary-card">
-                <div class="sens-summary-label">BCR (DCE + outbreak benefits)</div>
-                <div class="sens-summary-value">${epiActive && p.bcrCombined !== null && isFinite(p.bcrCombined) ? p.bcrCombined.toFixed(2) : "-"}</div>
+                <div class="sens-summary-label">Active NPV</div>
+                <div class="sens-summary-value">${formatCurrency(active.npv, state.currency)}</div>
             </div>
         `;
     }
@@ -1906,6 +2138,10 @@ function loadSavedScenarios() {
    Excel and PDF export
    =========================== */
 
+/**
+ * Export the saved scenario portfolio to Excel.
+ * This keeps the original behaviour for the portfolio tab.
+ */
 function exportScenariosToExcel() {
     if (!window.XLSX) {
         showToast("Excel export library not available.", "error");
@@ -2013,6 +2249,10 @@ function exportScenariosToExcel() {
     showToast("Excel file downloaded.", "success");
 }
 
+/**
+ * Export the current policy configuration to a PDF brief.
+ * This preserves the existing behaviour for the policy brief button.
+ */
 function exportPolicyBriefPdf() {
     const jspdf = window.jspdf;
     if (!jspdf) {
@@ -2157,6 +2397,176 @@ function exportPolicyBriefPdf() {
 
     doc.save("steps_fetp_policy_brief.pdf");
     showToast("Policy brief PDF downloaded.", "success");
+}
+
+/**
+ * Export the DCE sensitivity / benefits table to Excel.
+ * This uses the same logic as the on-screen table so that
+ * donors and funders receive a consistent set of numbers.
+ */
+function exportDceSensitivityToExcel() {
+    if (!window.XLSX) {
+        showToast("Excel export library not available.", "error");
+        return;
+    }
+    if (!state.lastResults) {
+        showToast("Apply a configuration before exporting DCE benefits.", "warning");
+        return;
+    }
+
+    const comp = getSensitivityComputation(state.lastResults);
+    if (!comp) {
+        showToast("No sensitivity results available to export.", "warning");
+        return;
+    }
+
+    const { dceCba, epiActive, benefitMode, classFilter } = comp;
+    const { profiles, totalCostAllCohorts, epiOutbreakBenefitAllCohorts } = dceCba;
+
+    const header = [
+        "Model / class",
+        "Total economic cost (all cohorts, INR)",
+        "Total WTP (all cohorts, INR)",
+        "WTP from response capacity (all cohorts, INR)",
+        "Epi outbreak benefit (all cohorts, INR)",
+        "Endorsement rate (%)",
+        "Effective WTP (all cohorts, INR)",
+        "BCR (active)",
+        "NPV (active, INR)"
+    ];
+
+    const rows = [];
+    const keys = ["overall", "supportive", "conservative"];
+
+    keys.forEach(key => {
+        const p = profiles[key];
+        if (!p) return;
+        if (classFilter !== "all" && classFilter !== key) return;
+
+        const active = getActiveCbaValues(p, epiActive, benefitMode);
+        const epiBenefit = epiActive ? epiOutbreakBenefitAllCohorts : 0;
+        const endorsementPct = p.endorsementRate * 100;
+
+        rows.push([
+            p.label,
+            totalCostAllCohorts,
+            p.wtpAllCohorts,
+            p.wtpRespAllCohorts,
+            epiBenefit,
+            endorsementPct,
+            p.effectiveBenefitAllCohorts,
+            active.bcr,
+            active.npv
+        ]);
+    });
+
+    const data = [header, ...rows];
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "DCE benefits sensitivity");
+    XLSX.writeFile(wb, "steps_fetp_dce_benefits_sensitivity.xlsx");
+    showToast("DCE benefits Excel file downloaded.", "success");
+}
+
+/**
+ * Export the DCE sensitivity / benefits table to a PDF summary
+ * that can be attached directly to donor reports.
+ */
+function exportDceSensitivityToPdf() {
+    const jspdf = window.jspdf;
+    if (!jspdf) {
+        showToast("PDF export library not available.", "error");
+        return;
+    }
+    if (!state.lastResults) {
+        showToast("Apply a configuration before exporting DCE benefits.", "warning");
+        return;
+    }
+
+    const comp = getSensitivityComputation(state.lastResults);
+    if (!comp) {
+        showToast("No sensitivity results available to export.", "warning");
+        return;
+    }
+
+    const { dceCba, epiActive, benefitMode, classFilter } = comp;
+    const { profiles, totalCostAllCohorts, epiOutbreakBenefitAllCohorts } = dceCba;
+
+    const doc = new jspdf.jsPDF("landscape");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(12);
+    doc.text("STEPS FETP India – DCE Benefits Sensitivity Summary", 14, 16);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    const subtitle = `Benefit definition: ${benefitMode === "effectiveWtp" ? "endorsement-adjusted WTP" : "total WTP"}; Epi benefits: ${epiActive ? "included" : "excluded"}.`;
+    doc.text(subtitle, 14, 24);
+
+    const headers = [
+        "Model / class",
+        "Cost (INR)",
+        "Total WTP (INR)",
+        "WTP – response (INR)",
+        "Epi benefit (INR)",
+        "Endorsement (%)",
+        "Effective WTP (INR)",
+        "BCR (active)",
+        "NPV (active, INR)"
+    ];
+
+    const startY = 32;
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const margin = 10;
+    const usableWidth = pageWidth - margin * 2;
+    const colWidth = usableWidth / headers.length;
+
+    let y = startY;
+
+    // Header row
+    headers.forEach((h, idx) => {
+        const x = margin + idx * colWidth + 1;
+        doc.text(h, x, y);
+    });
+
+    y += 6;
+
+    const keys = ["overall", "supportive", "conservative"];
+
+    keys.forEach(key => {
+        const p = profiles[key];
+        if (!p) return;
+        if (classFilter !== "all" && classFilter !== key) return;
+
+        const active = getActiveCbaValues(p, epiActive, benefitMode);
+        const epiBenefit = epiActive ? epiOutbreakBenefitAllCohorts : 0;
+        const endorsementPct = p.endorsementRate * 100;
+
+        const rowValues = [
+            p.label,
+            formatCurrencyInr(totalCostAllCohorts, 0),
+            formatCurrencyInr(p.wtpAllCohorts, 0),
+            formatCurrencyInr(p.wtpRespAllCohorts, 0),
+            epiActive ? formatCurrencyInr(epiBenefit, 0) : "0",
+            endorsementPct.toFixed(1),
+            formatCurrencyInr(p.effectiveBenefitAllCohorts, 0),
+            (active.bcr !== null && isFinite(active.bcr)) ? active.bcr.toFixed(2) : "-",
+            formatCurrencyInr(active.npv, 0)
+        ];
+
+        rowValues.forEach((val, idx) => {
+            const x = margin + idx * colWidth + 1;
+            doc.text(String(val), x, y);
+        });
+
+        y += 6;
+        if (y > doc.internal.pageSize.getHeight() - 14) {
+            doc.addPage();
+            y = 16;
+        }
+    });
+
+    doc.save("steps_fetp_dce_benefits_sensitivity.pdf");
+    showToast("DCE benefits PDF downloaded.", "success");
 }
 
 /* ===========================
