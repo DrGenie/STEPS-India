@@ -1,15 +1,15 @@
-
 {
   "meta": {
     "name": "STEPS FETP India epidemiological configuration",
-    "version": "1.2",
+    "version": "1.3",
     "description": "Default multipliers and indicative monetary values for graduates and outbreak responses used by the STEPS decision aid.",
     "lastUpdated": "2025-12-03",
-    "author": "Mesfin Genie and et al",
-    "notes": "Version 1.2 adds structured sections for time horizon, currency, tier-specific multipliers and values, defaults, and ranges while preserving backwards compatibility with Versions 1.0 and 1.1.",
+    "author": "Mesfin Genie and collaborators",
+    "notes": "Version 1.2 adds structured sections for time horizon, currency, tier-specific multipliers and values, defaults, and ranges while preserving backwards compatibility with Versions 1.0 and 1.1. Version 1.3 adds explicit response-time multipliers and outbreak-response benefit parameters for DCE-based sensitivity analysis, while preserving backwards compatibility with Versions 1.0–1.2.",
     "backwardsCompatibleWith": [
       "1.0",
-      "1.1"
+      "1.1",
+      "1.2"
     ],
     "intendedUse": "These parameters are used to translate DCE-derived willingness-to-pay for FETP programmes into indicative monetary benefits (per graduate and per outbreak response) over a specified planning horizon.",
     "documentationUrl": "https://example.org/steps-fetp-india/technical-appendix",
@@ -44,6 +44,7 @@
       "label": "Frontline",
       "durationMonths": 3,
       "gradRate": 0.9,
+      "gradShare": 0.9,
       "outbreaksPerCohortPerYear": 0.3,
       "valuePerGraduate": 400000,
       "valuePerOutbreak": 30000000,
@@ -60,6 +61,7 @@
       "label": "Intermediate",
       "durationMonths": 12,
       "gradRate": 0.9,
+      "gradShare": 0.9,
       "outbreaksPerCohortPerYear": 0.5,
       "valuePerGraduate": 500000,
       "valuePerOutbreak": 30000000,
@@ -76,6 +78,7 @@
       "label": "Advanced",
       "durationMonths": 24,
       "gradRate": 0.95,
+      "gradShare": 0.95,
       "outbreaksPerCohortPerYear": 0.8,
       "valuePerGraduate": 600000,
       "valuePerOutbreak": 40000000,
@@ -121,6 +124,20 @@
       "value_per_graduate_inr": 600000,
       "value_per_outbreak_response_inr": 40000000
     }
+  },
+
+  "response_time_settings": {
+    "unit": "days_from_detection_to_response",
+    "base_response_time_days": 30,
+    "min_response_time_days": 7,
+    "max_response_time_days": 30,
+    "notes": "These settings describe the range of response times used when linking outbreak-response capacity to relative benefits in the DCE sensitivity tab."
+  },
+
+  "response_time_multipliers": {
+    "30": 1.0,
+    "15": 1.2,
+    "7": 1.5
   },
 
   "defaults": {
@@ -436,6 +453,14 @@
         "advanced"
       ],
       "description": "FETP programme tier."
+    },
+    "response_time_multipliers": {
+      "type": "object",
+      "description": "Mapping from response time in days (7, 15, 30) to relative outbreak-response benefit multipliers used in DCE-based sensitivity analysis."
+    },
+    "response_time_settings": {
+      "type": "object",
+      "description": "Metadata and bounds for outbreak-response times used when linking response time to benefits."
     }
   }
 }
