@@ -1,6 +1,6 @@
-/* ===================================================
+ /* ===================================================
    STEPS FETP India Decision Aid
-   Script with interactiveee DCE sensitivity tab
+   Script with interactive DCE sensitivity tab
    =================================================== */
 
 /* ===========================
@@ -69,10 +69,11 @@ const LC2_COEFS = {
     costPerThousand: -0.001
 };
 
-/* Conservative / resister latent class.
-   This class is used for endorsement, but its cost coefficient
-   is not used for WTP in the CBA, as it is small and not
-   statistically reliable. */
+/* Conservative / resister class.
+   We will use these coefficients for endorsement only.
+   We deliberately do not construct WTP-based CBA metrics
+   for this class because the cost coefficient is very small
+   and statistically weak (cost-insensitive group). */
 const LC1_COEFS = {
     ascProgram: 0.181,
     ascOptOut: 1.222,
@@ -229,6 +230,8 @@ const DEFAULT_EPI_SETTINGS = {
     }
 };
 
+/* Response time multipliers m_30, m_15, m_7 used to
+   scale outbreak benefits by timeliness of response. */
 const RESPONSE_TIME_MULTIPLIERS = {
     "30": 1.0,
     "15": 1.2,
@@ -247,6 +250,7 @@ const state = {
     currentTier: "frontline",
     currentCostSourceId: null,
     lastResults: null,
+    dceScenario: null, // scenario-level object for the DCE benefits tab
     scenarios: [],
     charts: {
         uptake: null,
@@ -301,12 +305,28 @@ function formatCurrency(valueInInr, currency = "INR", decimalsInr = 0) {
     return formatCurrencyInr(valueInInr, decimalsInr);
 }
 
+/* For the DCE sensitivity tab we sometimes want to
+   display large amounts in millions of INR with 2 d.p. */
+function formatCurrencyInrMillions(valueInInr, decimals = 2) {
+    if (valueInInr === null || valueInInr === undefined || isNaN(valueInInr)) return "-";
+    const millions = valueInInr / 1000000;
+    return `INR ${millions.toLocaleString("en-IN", {
+        maximumFractionDigits: decimals,
+        minimumFractionDigits: decimals
+    })} M`;
+}
+
 function logistic(x) {
     if (x > 50) return 1;
     if (x < -50) return 0;
     return 1 / (1 + Math.exp(-x));
 }
 
+/* ===========================
+   Preference utilities and WTP
+   =========================== */
+
+/* Return utility from all non-cost attributes for a given configuration. */
 function computeNonCostUtility(cfg, coefs) {
     const uTier = coefs.tier[cfg.tier] || 0;
     const uCareer = coefs.career[cfg.career] || 0;
@@ -316,20 +336,25 @@ function computeNonCostUtility(cfg, coefs) {
     return uTier + uCareer + uMentor + uDelivery + uResponse;
 }
 
-/**
- * Compute marginal willingness-to-pay per active attribute level.
- *
- * Internally this works in thousand INR per trainee per month using
- * -beta_k / beta_cost, then converts to INR by multiplying by 1,000.
- * The UI never shows these formulas; only the resulting values are used.
- */
+/*
+   Compute WTP components for each active attribute level.
+
+   Internally this uses the ratio of each attribute coefficient
+   to the cost coefficient (per 1,000 INR per month) and then
+   scales to INR per trainee per month. It returns:
+
+   - totalPerTraineePerMonth: sum of WTP across tier, career,
+     mentorship, delivery and response attributes, in INR.
+   - components: same breakdown by attribute group.
+
+   This is purely internal; no formulas are displayed in the UI.
+*/
 function computeWtpComponents(cfg, coefs) {
     const betaCost = coefs.costPerThousand || 0;
     if (!betaCost) {
         return {
             totalPerTraineePerMonth: null,
-            components: null,
-            thousandUnits: null
+            components: null
         };
     }
 
@@ -339,39 +364,23 @@ function computeWtpComponents(cfg, coefs) {
     const betaDelivery = coefs.delivery[cfg.delivery] || 0;
     const betaResponse = coefs.response[cfg.response] || 0;
 
-    const tierThousand = -betaTier / betaCost;
-    const careerThousand = -betaCareer / betaCost;
-    const mentorshipThousand = -betaMentor / betaCost;
-    const deliveryThousand = -betaDelivery / betaCost;
-    const responseThousand = -betaResponse / betaCost;
+    // Each component is converted to INR per trainee per month.
+    const tierWtp = -1000 * betaTier / betaCost;
+    const careerWtp = -1000 * betaCareer / betaCost;
+    const mentorshipWtp = -1000 * betaMentor / betaCost;
+    const deliveryWtp = -1000 * betaDelivery / betaCost;
+    const responseWtp = -1000 * betaResponse / betaCost;
 
-    const tierInr = tierThousand * 1000;
-    const careerInr = careerThousand * 1000;
-    const mentorshipInr = mentorshipThousand * 1000;
-    const deliveryInr = deliveryThousand * 1000;
-    const responseInr = responseThousand * 1000;
-
-    const totalThousand = tierThousand + careerThousand + mentorshipThousand + deliveryThousand + responseThousand;
-    const totalInr = totalThousand * 1000;
+    const total = tierWtp + careerWtp + mentorshipWtp + deliveryWtp + responseWtp;
 
     return {
-        // INR per trainee per month
-        totalPerTraineePerMonth: totalInr,
+        totalPerTraineePerMonth: total,
         components: {
-            tier: tierInr,
-            career: careerInr,
-            mentorship: mentorshipInr,
-            delivery: deliveryInr,
-            response: responseInr
-        },
-        // Thousand INR per trainee per month (not currently shown in UI, kept for internal use)
-        thousandUnits: {
-            total: totalThousand,
-            tier: tierThousand,
-            career: careerThousand,
-            mentorship: mentorshipThousand,
-            delivery: deliveryThousand,
-            response: responseThousand
+            tier: tierWtp,
+            career: careerWtp,
+            mentorship: mentorshipWtp,
+            delivery: deliveryWtp,
+            response: responseWtp
         }
     };
 }
@@ -380,6 +389,53 @@ function getModelCoefs(modelId) {
     if (modelId === "lc2") return LC2_COEFS;
     if (modelId === "lc1") return LC1_COEFS;
     return MXL_COEFS;
+}
+
+/*
+   Compute endorsement and, where appropriate, WTP for a given model.
+
+   - cfg: configuration
+   - modelId: "mxl", "lc2" or "lc1"
+   - options.suppressWtp: when true, endorsement is still computed
+     but WTP-related outputs are omitted (used for the conservative class).
+*/
+function computeEndorsementAndWtp(cfg, modelId, options = {}) {
+    const { suppressWtp = false } = options;
+
+    const coefs = getModelCoefs(modelId);
+    const designUtility = computeNonCostUtility(cfg, coefs);
+
+    const uAsc = typeof coefs.ascProgram === "number" ? coefs.ascProgram : 1;
+    const nonCostUtilityWithAsc = uAsc + designUtility;
+
+    const costThousands = cfg.costPerTraineePerMonth / 1000;
+    const costUtil = (coefs.costPerThousand || 0) * costThousands;
+
+    const ascOptOut = coefs.ascOptOut || 0;
+    const deltaV = -ascOptOut + nonCostUtilityWithAsc + costUtil;
+
+    const endorseProb = logistic(deltaV);
+    const optOutProb = 1 - endorseProb;
+
+    const betaCost = coefs.costPerThousand || 0;
+    let wtpConfig = null;
+    let wtpComponents = null;
+    if (!suppressWtp && betaCost !== 0) {
+        const wtp = computeWtpComponents(cfg, coefs);
+        wtpConfig = wtp.totalPerTraineePerMonth;
+        wtpComponents = wtp.components;
+    }
+
+    return {
+        designUtility,
+        nonCostUtilityWithAsc,
+        costUtil,
+        deltaV,
+        endorseProb,
+        optOutProb,
+        wtpConfig,
+        wtpComponents
+    };
 }
 
 /* ===========================
@@ -415,54 +471,6 @@ function readConfigurationFromInputs() {
         numberOfCohorts,
         scenarioName: scenarioNameInput ? scenarioNameInput.value.trim() : "",
         scenarioNotes: scenarioNotesInput ? scenarioNotesInput.value.trim() : ""
-    };
-}
-
-/* ===========================
-   Utility and endorsement
-   =========================== */
-
-/**
- * Compute utility difference between programme and opt out, endorsement
- * probabilities, and WTP (where applicable).
- *
- * This function is the single point where discrete choice model
- * coefficients are turned into endorsement and WTP measures.
- */
-function computeEndorsementAndWtp(cfg, modelId) {
-    const coefs = getModelCoefs(modelId);
-    const designUtility = computeNonCostUtility(cfg, coefs);
-
-    const uAsc = typeof coefs.ascProgram === "number" ? coefs.ascProgram : 1;
-    const nonCostUtilityWithAsc = uAsc + designUtility;
-
-    const costThousands = cfg.costPerTraineePerMonth / 1000;
-    const costUtil = (coefs.costPerThousand || 0) * costThousands;
-
-    const ascOptOut = coefs.ascOptOut || 0;
-    const deltaV = -ascOptOut + nonCostUtilityWithAsc + costUtil;
-
-    const endorseProb = logistic(deltaV);
-    const optOutProb = 1 - endorseProb;
-
-    const betaCost = coefs.costPerThousand || 0;
-    let wtpConfig = null;
-    let wtpComponents = null;
-    if (betaCost !== 0) {
-        const wtp = computeWtpComponents(cfg, coefs);
-        wtpConfig = wtp.totalPerTraineePerMonth;
-        wtpComponents = wtp.components;
-    }
-
-    return {
-        designUtility,
-        nonCostUtilityWithAsc,
-        costUtil,
-        deltaV,
-        endorseProb,
-        optOutProb,
-        wtpConfig,
-        wtpComponents
     };
 }
 
@@ -548,7 +556,9 @@ function computeCosts(cfg) {
         return {
             durationMonths,
             programmeCostPerCohort,
+            // keep both spellings for backward compatibility
             opportunityCostPerCort: opportunityCostPerCohort,
+            opportunityCostPerCohort,
             totalEconomicCostPerCohort,
             components: []
         };
@@ -598,6 +608,15 @@ function getResponseTimeMultiplier(responseValue) {
     return 1.0;
 }
 
+/*
+   Epidemiological benefit calculation.
+
+   Outbreak benefits are scaled by:
+   - number of outbreaks supported,
+   - planning horizon,
+   - indicative value per outbreak,
+   - and the response-time multiplier m_30 / m_15 / m_7.
+*/
 function computeEpi(cfg, endorseProb) {
     const tierConfig = state.epiSettings.tiers[cfg.tier];
     if (!tierConfig) {
@@ -625,9 +644,6 @@ function computeEpi(cfg, endorseProb) {
     const responseMultiplier = getResponseTimeMultiplier(cfg.response);
 
     const benefitGraduatesAllCohorts = graduatesAllCohorts * valuePerGrad;
-
-    // Base outbreak benefit over the planning horizon before applying
-    // response time multipliers.
     const benefitOutbreaksAllCohortsBase = outbreaksPerYearAllCohorts * horizon * valuePerOutbreak;
     const benefitOutbreaksAllCohorts = benefitOutbreaksAllCohortsBase * responseMultiplier;
 
@@ -651,9 +667,13 @@ function computeEpi(cfg, endorseProb) {
    DCE benefits & sensitivity
    =========================== */
 
-/* Endorsement override for sensitivity tab.
-   If the user enters 70 it is treated as 70%.
-   If the user enters 0.7 it is treated as 70%. */
+/*
+   Endorsement override for sensitivity tab.
+
+   - If user enters 70 treat as 70%
+   - If user enters 0.7 treat as 70%
+   - If left empty, fall back to model-based endorsement.
+*/
 function getEndorsementRateForSensitivity(defaultRate) {
     let rate = defaultRate;
     const input =
@@ -671,9 +691,12 @@ function getEndorsementRateForSensitivity(defaultRate) {
     return rate;
 }
 
-/* DCE and EPI multipliers for the sensitivity tab.
-   Values can be entered in percent form (100 = baseline)
-   or as direct multipliers between 0 and 2. */
+/*
+   DCE and EPI multipliers for the sensitivity tab.
+
+   Inputs are allowed either in percentage form (100 = baseline)
+   or as direct multipliers between 0 and 2.
+*/
 function getSensitivityScales() {
     function parseScale(id) {
         const el = document.getElementById(id);
@@ -689,44 +712,57 @@ function getSensitivityScales() {
     };
 }
 
-/**
- * Active benefit definition used for NPV/BCR in the sensitivity tab.
- *  - "totalWtp": use total DCE-based WTP as the primary benefit.
- *  - "effectiveWtp": use endorsement-adjusted WTP as the primary benefit.
- * The epi toggle then controls whether outbreak benefits are added.
- */
-function getBenefitDefinitionMode() {
+/*
+   Benefit definition selection for the sensitivity tab.
+
+   - "total_wtp": BCR/NPV based on total WTP
+   - "effective_wtp": BCR/NPV based on endorsement-adjusted WTP
+*/
+function getBenefitDefinitionSelection() {
     const el = document.getElementById("dce-benefit-definition");
-    if (!el) return "totalWtp";
-    const val = (el.value || "").trim();
-    if (val === "effectiveWtp") return "effectiveWtp";
-    return "totalWtp";
+    if (!el) return "total_wtp";
+    const val = (el.value || "").toLowerCase();
+    if (val === "effective" || val === "effective_wtp") return "effective_wtp";
+    return "total_wtp";
 }
 
-/**
- * Selected class filter for the sensitivity table.
- *  - "all": show all classes
- *  - "overall": overall mixed logit
- *  - "supportive": supportive latent class
- *  - "conservative": conservative/resister class
- */
-function getSelectedDceClass() {
-    const el = document.getElementById("dce-class-selector");
+/*
+   Class filter selection for the sensitivity tab.
+
+   - "all": show all classes
+   - "overall": mixed logit average
+   - "supportive": supportive LC class
+   - "conservative": conservative/resister LC class
+*/
+function getClassFilterSelection() {
+    const el = document.getElementById("dce-class-filter");
     if (!el) return "all";
-    const v = (el.value || "").trim();
-    if (["all", "overall", "supportive", "conservative"].includes(v)) {
-        return v;
+    const val = (el.value || "").toLowerCase();
+    if (val === "overall" || val === "supportive" || val === "conservative" || val === "all") {
+        return val;
     }
     return "all";
 }
 
-/**
- * Compute DCE-based benefit profiles and simple CBA metrics for each
- * preference model (overall MXL, supportive LC class, conservative LC class).
- *
- * Everything is kept internal; the UI only receives rounded aggregates.
- * No formulas are exposed in the interface.
- */
+/*
+   Core DCE-based benefit and simple CBA profiles.
+
+   For each preference group (overall mixed logit, supportive LC,
+   and conservative LC) we compute:
+
+   - WTP per trainee per month and by component
+   - WTP per cohort and across all cohorts
+   - WTP attributable specifically to outbreak response time
+   - Endorsement-adjusted (effective) WTP
+   - NPV and BCR using:
+       • Total WTP only (DCE benefit)
+       • Total WTP + outbreak benefit
+       • Effective WTP only
+       • Effective WTP + outbreak benefit
+
+   For the conservative class we suppress WTP-based metrics and
+   only retain endorsement, as this group is cost-insensitive.
+*/
 function computeDceCbaProfiles(cfg, costs, epi, options) {
     const opts = options || {};
     const useUiOverrides = !!opts.useUiOverrides;
@@ -736,196 +772,144 @@ function computeDceCbaProfiles(cfg, costs, epi, options) {
     const durationMonths = costs.durationMonths || 0;
     const trainees = cfg.traineesPerCohort || 0;
     const cohorts = cfg.numberOfCohorts || 0;
-
     const totalCostAllCohorts = costs.totalEconomicCostPerCohort * cohorts;
 
-    // Outbreak-related monetary benefit from the epi module, scaled
-    // by the epi sensitivity multiplier.
     const epiOutbreakBenefitAllCohorts =
         (epi.benefitOutbreaksAllCohorts || 0) * epiScale;
 
     const overallUtil = computeEndorsementAndWtp(cfg, "mxl");
     const supportiveUtil = computeEndorsementAndWtp(cfg, "lc2");
-    const conservativeUtil = computeEndorsementAndWtp(cfg, "lc1");
+    const conservativeUtil = computeEndorsementAndWtp(cfg, "lc1", { suppressWtp: true });
 
-    /**
-     * Build a per-class WTP and CBA profile.
-     *
-     * allowWtp is set to false for the conservative class so that its
-     * cost coefficient is not used to infer monetary WTP. This keeps
-     * the handling of cost-insensitive groups conservative.
-     */
     function buildProfile(label, utilObj, allowWtp) {
-        const baseWtpPerTraineePerMonth =
-            allowWtp && typeof utilObj.wtpConfig === "number"
-                ? utilObj.wtpConfig
-                : 0;
-
-        const components = utilObj.wtpComponents || {};
-        const baseWtpRespPerTraineePerMonth =
-            allowWtp && typeof components.response === "number"
-                ? components.response
-                : 0;
-
-        const wtpPerCohort =
-            baseWtpPerTraineePerMonth * trainees * durationMonths;
-        const wtpRespPerCohort =
-            baseWtpRespPerTraineePerMonth * trainees * durationMonths;
-
-        const baseWtpAllCohorts = wtpPerCohort * cohorts;
-        const baseWtpRespAllCohorts = wtpRespPerCohort * cohorts;
-
-        const wtpAllCohorts = baseWtpAllCohorts * dceScale;
-        const wtpRespAllCohorts = baseWtpRespAllCohorts * dceScale;
-
         const baseRate = utilObj.endorseProb || 0;
         const endorsementRate = useUiOverrides
             ? getEndorsementRateForSensitivity(baseRate)
             : baseRate;
 
-        // Endorsement-adjusted benefit from the DCE.
-        const effectiveBenefitAllCohorts = wtpAllCohorts * endorsementRate;
+        let wtpPerTraineePerMonth = null;
+        let components = null;
+        let wtpRespPerTraineePerMonth = null;
 
-        // DCE-only NPV/BCR (using total WTP as the benefit stream).
-        const npvDce = wtpAllCohorts - totalCostAllCohorts;
-        const bcrDce =
-            totalCostAllCohorts > 0 ? wtpAllCohorts / totalCostAllCohorts : null;
+        let wtpPerCohort = null;
+        let wtpRespPerCohort = null;
+        let baseWtpAllCohorts = null;
+        let baseWtpRespAllCohorts = null;
 
-        // DCE-only NPV/BCR using endorsement-adjusted WTP.
-        const npvEffective = effectiveBenefitAllCohorts - totalCostAllCohorts;
-        const bcrEffective =
-            totalCostAllCohorts > 0
-                ? effectiveBenefitAllCohorts / totalCostAllCohorts
-                : null;
+        let wtpAllCohorts = null;
+        let wtpRespAllCohorts = null;
+        let effectiveBenefitAllCohorts = null;
 
-        // Combined benefits: total WTP + epi outbreak benefits.
-        const combinedBenefit = wtpAllCohorts + epiOutbreakBenefitAllCohorts;
-        const npvCombined = combinedBenefit - totalCostAllCohorts;
-        const bcrCombined =
-            totalCostAllCohorts > 0 ? combinedBenefit / totalCostAllCohorts : null;
+        let npvDce = null;
+        let bcrDce = null;
 
-        // Combined benefits using endorsement-adjusted WTP + epi.
-        const combinedEffectiveBenefit =
-            effectiveBenefitAllCohorts + epiOutbreakBenefitAllCohorts;
-        const npvCombinedEffective =
-            combinedEffectiveBenefit - totalCostAllCohorts;
-        const bcrCombinedEffective =
-            totalCostAllCohorts > 0
-                ? combinedEffectiveBenefit / totalCostAllCohorts
-                : null;
+        let npvCombined = null;
+        let bcrCombined = null;
+
+        let npvEffective = null;
+        let bcrEffective = null;
+
+        let npvEffectiveCombined = null;
+        let bcrEffectiveCombined = null;
+
+        if (allowWtp && typeof utilObj.wtpConfig === "number" && isFinite(utilObj.wtpConfig)) {
+            wtpPerTraineePerMonth = utilObj.wtpConfig;
+            components = utilObj.wtpComponents || {};
+            if (typeof components.response === "number") {
+                wtpRespPerTraineePerMonth = components.response;
+            }
+
+            wtpPerCohort = wtpPerTraineePerMonth * trainees * durationMonths;
+            wtpRespPerCohort = (wtpRespPerTraineePerMonth || 0) * trainees * durationMonths;
+
+            baseWtpAllCohorts = wtpPerCohort * cohorts;
+            baseWtpRespAllCohorts = wtpRespPerCohort * cohorts;
+
+            wtpAllCohorts = baseWtpAllCohorts * dceScale;
+            wtpRespAllCohorts = baseWtpRespAllCohorts * dceScale;
+
+            effectiveBenefitAllCohorts = wtpAllCohorts * endorsementRate;
+
+            npvDce = wtpAllCohorts - totalCostAllCohorts;
+            if (totalCostAllCohorts > 0) {
+                bcrDce = wtpAllCohorts / totalCostAllCohorts;
+            }
+
+            const combinedBenefit = wtpAllCohorts + epiOutbreakBenefitAllCohorts;
+            npvCombined = combinedBenefit - totalCostAllCohorts;
+            if (totalCostAllCohorts > 0) {
+                bcrCombined = combinedBenefit / totalCostAllCohorts;
+            }
+
+            npvEffective = effectiveBenefitAllCohorts - totalCostAllCohorts;
+            if (totalCostAllCohorts > 0) {
+                bcrEffective = effectiveBenefitAllCohorts / totalCostAllCohorts;
+            }
+
+            const effectiveCombinedBenefit = effectiveBenefitAllCohorts + epiOutbreakBenefitAllCohorts;
+            npvEffectiveCombined = effectiveCombinedBenefit - totalCostAllCohorts;
+            if (totalCostAllCohorts > 0) {
+                bcrEffectiveCombined = effectiveCombinedBenefit / totalCostAllCohorts;
+            }
+        }
 
         return {
             label,
-            wtpPerTraineePerMonth: baseWtpPerTraineePerMonth,
+            endorsementRate,
+            wtpPerTraineePerMonth,
             wtpPerCohort,
             wtpAllCohorts,
-            wtpRespPerTraineePerMonth: baseWtpRespPerTraineePerMonth,
+            wtpRespPerTraineePerMonth,
             wtpRespPerCohort,
             wtpRespAllCohorts,
-            endorsementRate,
             effectiveBenefitAllCohorts,
             npvDce,
             bcrDce,
-            npvEffective,
-            bcrEffective,
-            combinedBenefit,
             npvCombined,
             bcrCombined,
-            combinedEffectiveBenefit,
-            npvCombinedEffective,
-            bcrCombinedEffective
+            npvEffective,
+            bcrEffective,
+            npvEffectiveCombined,
+            bcrEffectiveCombined
         };
     }
 
     const profiles = {
         overall: buildProfile("Overall (mixed logit)", overallUtil, true),
         supportive: buildProfile("Supportive class (latent class)", supportiveUtil, true),
-        // Conservative/resister class: endorsement only, WTP set to zero.
-        conservative: buildProfile("Conservative / resister class", conservativeUtil, false)
-    };
-
-    // Scenario-level summary object used for exports and any
-    // higher-level reporting needs.
-    const scenario = {
-        id: cfg.scenarioName || "current",
-        label: cfg.scenarioName || "Current configuration",
-        totalCostInr: totalCostAllCohorts,
-        B_s_WTP_overall: profiles.overall.wtpAllCohorts,
-        B_s_WTP_response_overall: profiles.overall.wtpRespAllCohorts,
-        B_s_WTP_supporters: profiles.supportive.wtpAllCohorts,
-        B_s_WTP_conservative: profiles.conservative.wtpAllCohorts,
-        B_s_epi: epiOutbreakBenefitAllCohorts,
-        endorsement_overall: profiles.overall.endorsementRate,
-        endorsement_supporters: profiles.supportive.endorsementRate,
-        endorsement_conservative: profiles.conservative.endorsementRate,
-        NPV_DCE_overall: profiles.overall.npvDce,
-        BCR_DCE_overall: profiles.overall.bcrDce,
-        NPV_total_overall: profiles.overall.npvCombined,
-        BCR_total_overall: profiles.overall.bcrCombined,
-        NPV_DCE_supporters: profiles.supportive.npvDce,
-        BCR_DCE_supporters: profiles.supportive.bcrDce,
-        NPV_total_supporters: profiles.supportive.npvCombined,
-        BCR_total_supporters: profiles.supportive.bcrCombined,
-        NPV_total_conservative: profiles.conservative.npvCombined,
-        BCR_total_conservative: profiles.conservative.bcrCombined
+        conservative: buildProfile("Conservative/resister class (latent class)", conservativeUtil, false)
     };
 
     return {
         profiles,
         totalCostAllCohorts,
-        epiOutbreakBenefitAllCohorts,
-        scenario
+        epiOutbreakBenefitAllCohorts
     };
 }
 
-/**
- * Given a profile and the UI settings (epi toggle and benefit definition),
- * compute the BCR and NPV that should be displayed and exported.
- */
-function getActiveCbaValues(profile, epiActive, benefitMode) {
-    if (!profile) {
-        return { bcr: null, npv: null };
-    }
+/*
+   Scenario-level summary for the DCE sensitivity tab.
 
-    if (benefitMode === "effectiveWtp") {
-        if (epiActive) {
-            return {
-                bcr: profile.bcrCombinedEffective,
-                npv: profile.npvCombinedEffective
-            };
-        }
-        return {
-            bcr: profile.bcrEffective,
-            npv: profile.npvEffective
-        };
-    }
-
-    // Default: benefitMode === "totalWtp"
-    if (epiActive) {
-        return {
-            bcr: profile.bcrCombined,
-            npv: profile.npvCombined
-        };
-    }
-    return {
-        bcr: profile.bcrDce,
-        npv: profile.npvDce
-    };
-}
-
-/**
- * Package all sensitivity inputs and DCE results in one place.
- * Both the renderer and export functions use this helper so that
- * the table and the downloaded files always match.
- */
-function getSensitivityComputation(results) {
+   This bundles together:
+   - a scenario identifier and label
+   - total economic cost across cohorts
+   - outbreak-related epi benefit
+   - class-specific DCE benefit profiles
+   - information on whether epi benefits are active
+*/
+function buildDceScenarioSummary(results, overrides) {
     if (!results) return null;
 
-    const { dceScale, epiScale: rawEpiScale } = getSensitivityScales();
+    const overrideScales = (overrides && overrides.scales) || getSensitivityScales();
+    const dceScale = overrideScales.dceScale;
+    const epiScaleRaw = overrideScales.epiScale;
 
     const epiToggle = document.getElementById("dce-epi-benefit-toggle");
-    const epiActive = !epiToggle || epiToggle.checked;
-    const epiScale = epiActive ? rawEpiScale : 0;
+    const epiActive = overrides && typeof overrides.epiActive === "boolean"
+        ? overrides.epiActive
+        : (!epiToggle || epiToggle.checked);
+
+    const epiScale = epiActive ? epiScaleRaw : 0;
 
     const dceCba = computeDceCbaProfiles(results.cfg, results.costs, results.epi, {
         useUiOverrides: true,
@@ -933,14 +917,25 @@ function getSensitivityComputation(results) {
         epiScale
     });
 
-    const benefitMode = getBenefitDefinitionMode();
-    const classFilter = getSelectedDceClass();
+    const { profiles, totalCostAllCohorts, epiOutbreakBenefitAllCohorts } = dceCba;
+
+    const scenarioLabel = results.cfg.scenarioName || "Current configuration";
+    const scenarioId = [
+        results.cfg.tier,
+        results.cfg.career,
+        results.cfg.mentorship,
+        results.cfg.delivery,
+        results.cfg.response
+    ].join("_");
 
     return {
-        dceCba,
+        scenarioId,
+        scenarioLabel,
+        totalCostAllCohorts,
+        epiOutbreakBenefitAllCohorts,
+        profiles,
         epiActive,
-        benefitMode,
-        classFilter
+        scales: { dceScale, epiScale }
     };
 }
 
@@ -1487,88 +1482,155 @@ function updateNationalSimulation(results) {
    Sensitivity tab (interactive)
    =========================== */
 
-/**
- * Render the DCE benefits / sensitivity table and summary cards.
- * This uses the same internal computation used by the export
- * functions so that on-screen numbers and exported numbers match.
- */
+/*
+   Main renderer for the “Sensitivity / DCE Benefits” tab.
+
+   It takes the current configuration, applies:
+   - user-defined endorsement override,
+   - DCE and EPI multipliers,
+   - epi on/off toggle,
+   - benefit definition (total WTP vs effective WTP),
+   - preference-class filter,
+
+   and then recomputes WTP-based benefits, epi benefits and
+   all BCR / NPV variants for each preference group.
+*/
 function updateSensitivityTab(results) {
     const tableBody = document.querySelector("#dce-sensitivity-table tbody");
     if (!tableBody || !results) return;
 
-    const comp = getSensitivityComputation(results);
-    if (!comp) return;
+    const scenario = buildDceScenarioSummary(results);
+    if (!scenario || !scenario.profiles) return;
 
-    const { dceCba, epiActive, benefitMode, classFilter } = comp;
-    const { profiles, totalCostAllCohorts, epiOutbreakBenefitAllCohorts } = dceCba;
+    state.dceScenario = scenario;
+
+    const { profiles, totalCostAllCohorts, epiOutbreakBenefitAllCohorts, epiActive } = scenario;
+
+    const benefitDefinition = getBenefitDefinitionSelection();
+    const classFilter = getClassFilterSelection();
 
     tableBody.innerHTML = "";
 
-    const costText = formatCurrency(totalCostAllCohorts, state.currency);
-    const epiBenefitValue = epiActive ? epiOutbreakBenefitAllCohorts : 0;
-    const epiBenefitText = epiActive
-        ? formatCurrency(epiOutbreakBenefitAllCohorts, state.currency)
+    const costDisplayText = formatCurrencyInrMillions(totalCostAllCohorts);
+    const epiBenefitDisplayText = epiActive
+        ? formatCurrencyInrMillions(epiOutbreakBenefitAllCohorts)
         : "—";
 
-    const profileOrder = ["overall", "supportive", "conservative"];
+    const orderedKeys = ["overall", "supportive", "conservative"];
 
-    profileOrder.forEach(key => {
+    orderedKeys.forEach(key => {
         const p = profiles[key];
         if (!p) return;
 
-        if (classFilter !== "all" && classFilter !== key) {
-            return;
+        if (classFilter !== "all" && classFilter !== key) return;
+
+        let activeBcr = null;
+        let activeNpv = null;
+
+        if (benefitDefinition === "effective_wtp") {
+            if (epiActive) {
+                activeBcr = p.bcrEffectiveCombined;
+                activeNpv = p.npvEffectiveCombined;
+            } else {
+                activeBcr = p.bcrEffective;
+                activeNpv = p.npvEffective;
+            }
+        } else {
+            if (epiActive) {
+                activeBcr = p.bcrCombined;
+                activeNpv = p.npvCombined;
+            } else {
+                activeBcr = p.bcrDce;
+                activeNpv = p.npvDce;
+            }
         }
 
-        const active = getActiveCbaValues(p, epiActive, benefitMode);
+        const endorsementPercent = p.endorsementRate * 100;
 
         const tr = document.createElement("tr");
-
-        const endorsementPct = p.endorsementRate * 100;
-
         tr.innerHTML = `
             <td>${p.label}</td>
-            <td>${costText}</td>
-            <td>${formatCurrency(p.wtpAllCohorts, state.currency)}</td>
-            <td>${formatCurrency(p.wtpRespAllCohorts, state.currency)}</td>
-            <td>${epiBenefitText}</td>
-            <td>${formatPercent(endorsementPct, 1)}</td>
-            <td>${formatCurrency(p.effectiveBenefitAllCohorts, state.currency)}</td>
-            <td>${(active.bcr !== null && isFinite(active.bcr)) ? active.bcr.toFixed(2) : "-"}</td>
-            <td>${formatCurrency(active.npv, state.currency)}</td>
+            <td>${costDisplayText}</td>
+            <td>${p.wtpAllCohorts !== null && isFinite(p.wtpAllCohorts) ? formatCurrencyInrMillions(p.wtpAllCohorts) : "—"}</td>
+            <td>${p.wtpRespAllCohorts !== null && isFinite(p.wtpRespAllCohorts) ? formatCurrencyInrMillions(p.wtpRespAllCohorts) : "—"}</td>
+            <td>${epiBenefitDisplayText}</td>
+            <td>${isFinite(endorsementPercent) ? formatPercent(endorsementPercent, 1) : "—"}</td>
+            <td>${p.effectiveBenefitAllCohorts !== null && isFinite(p.effectiveBenefitAllCohorts) ? formatCurrencyInrMillions(p.effectiveBenefitAllCohorts) : "—"}</td>
+            <td>${(p.bcrDce !== null && isFinite(p.bcrDce)) ? p.bcrDce.toFixed(2) : "-"}</td>
+            <td>${p.npvDce !== null && isFinite(p.npvDce) ? formatCurrencyInrMillions(p.npvDce) : "-"}</td>
+            <td>${(p.bcrCombined !== null && isFinite(p.bcrCombined)) ? p.bcrCombined.toFixed(2) : "-"}</td>
+            <td>${p.npvCombined !== null && isFinite(p.npvCombined) ? formatCurrencyInrMillions(p.npvCombined) : "-"}</td>
+            <td>${(p.bcrEffective !== null && isFinite(p.bcrEffective)) ? p.bcrEffective.toFixed(2) : "-"}</td>
+            <td>${p.npvEffective !== null && isFinite(p.npvEffective) ? formatCurrencyInrMillions(p.npvEffective) : "-"}</td>
+            <td>${(activeBcr !== null && isFinite(activeBcr)) ? activeBcr.toFixed(2) : "-"}</td>
+            <td>${activeNpv !== null && isFinite(activeNpv) ? formatCurrencyInrMillions(activeNpv) : "-"}</td>
         `;
         tableBody.appendChild(tr);
     });
 
     const shareEl = document.getElementById("dce-response-share-label");
-    if (shareEl && profiles.overall && profiles.overall.wtpAllCohorts > 0) {
+    if (shareEl && profiles.overall && profiles.overall.wtpAllCohorts && profiles.overall.wtpAllCohorts > 0) {
         const share = (profiles.overall.wtpRespAllCohorts / profiles.overall.wtpAllCohorts) * 100;
         const safeShare = isFinite(share) ? share.toFixed(1) : "0.0";
-        shareEl.textContent = `${safeShare} % of the DCE-based benefit for this configuration comes from outbreak response capacity (overall mixed logit) under the current sensitivity settings.`;
+        shareEl.textContent =
+            `${safeShare} % of the DCE-based benefit for this configuration comes from outbreak response capacity (overall mixed logit) under the current sensitivity settings.`;
     }
 
-    // Small summary cards inside the sensitivity tab
     const sensSummary = document.getElementById("dce-sensitivity-summary");
     if (sensSummary && profiles.overall) {
         const p = profiles.overall;
-        const active = getActiveCbaValues(p, epiActive, benefitMode);
+
+        let activeBcrSummary = null;
+        let activeNpvSummary = null;
+        let activeLabel = "";
+
+        if (benefitDefinition === "effective_wtp") {
+            if (epiActive) {
+                activeBcrSummary = p.bcrEffectiveCombined;
+                activeNpvSummary = p.npvEffectiveCombined;
+                activeLabel = "BCR – Effective WTP + outbreak benefits";
+            } else {
+                activeBcrSummary = p.bcrEffective;
+                activeNpvSummary = p.npvEffective;
+                activeLabel = "BCR – Effective WTP (endorsers only)";
+            }
+        } else {
+            if (epiActive) {
+                activeBcrSummary = p.bcrCombined;
+                activeNpvSummary = p.npvCombined;
+                activeLabel = "BCR – Total WTP + outbreak benefits";
+            } else {
+                activeBcrSummary = p.bcrDce;
+                activeNpvSummary = p.npvDce;
+                activeLabel = "BCR – Total WTP (all respondents)";
+            }
+        }
+
+        const dceLabel = "Total DCE-based benefit (all cohorts)";
+        const effectiveLabel = "Effective benefit (endorsers only)";
+        const dceBcrLabel = "BCR (DCE benefit only)";
+        const combinedBcrLabel = "BCR (DCE + outbreak benefits)";
 
         sensSummary.innerHTML = `
             <div class="sens-summary-card">
-                <div class="sens-summary-label">Overall DCE benefit (all cohorts)</div>
-                <div class="sens-summary-value">${formatCurrency(p.wtpAllCohorts, state.currency)}</div>
+                <div class="sens-summary-label">${dceLabel}</div>
+                <div class="sens-summary-value">${p.wtpAllCohorts !== null && isFinite(p.wtpAllCohorts) ? formatCurrencyInrMillions(p.wtpAllCohorts) : "-"}</div>
             </div>
             <div class="sens-summary-card">
-                <div class="sens-summary-label">Effective benefit (endorsers only)</div>
-                <div class="sens-summary-value">${formatCurrency(p.effectiveBenefitAllCohorts, state.currency)}</div>
+                <div class="sens-summary-label">${effectiveLabel}</div>
+                <div class="sens-summary-value">${p.effectiveBenefitAllCohorts !== null && isFinite(p.effectiveBenefitAllCohorts) ? formatCurrencyInrMillions(p.effectiveBenefitAllCohorts) : "-"}</div>
             </div>
             <div class="sens-summary-card">
-                <div class="sens-summary-label">Active BCR</div>
-                <div class="sens-summary-value">${active.bcr !== null && isFinite(active.bcr) ? active.bcr.toFixed(2) : "-"}</div>
+                <div class="sens-summary-label">${dceBcrLabel}</div>
+                <div class="sens-summary-value">${p.bcrDce !== null && isFinite(p.bcrDce) ? p.bcrDce.toFixed(2) : "-"}</div>
             </div>
             <div class="sens-summary-card">
-                <div class="sens-summary-label">Active NPV</div>
-                <div class="sens-summary-value">${formatCurrency(active.npv, state.currency)}</div>
+                <div class="sens-summary-label">${combinedBcrLabel}</div>
+                <div class="sens-summary-value">${epiActive && p.bcrCombined !== null && isFinite(p.bcrCombined) ? p.bcrCombined.toFixed(2) : "-"}</div>
+            </div>
+            <div class="sens-summary-card">
+                <div class="sens-summary-label">${activeLabel}</div>
+                <div class="sens-summary-value">${activeBcrSummary !== null && isFinite(activeBcrSummary) ? activeBcrSummary.toFixed(2) : "-"}</div>
             </div>
         `;
     }
@@ -2042,1108 +2104,323 @@ function saveScenarioFromCurrentResults() {
         wtpConfig: r.util.wtpConfig,
         perCohortEconomicCost: r.costs.totalEconomicCostPerCohort,
         perCohortBenefit: r.epi.benefitPerCohort,
-        bcr: r.bcr,
-        perCohortNetBenefit: r.netBenefitAllCohorts / (cfg.numberOfCohorts || 1),
-        graduatesAllCohorts: r.epi.graduatesAllCohorts,
-        outbreaksPerYearAllCohorts: r.epi.outbreaksPerYearAllCohorts,
         totalCostAllCohorts: r.totalCostAllCohorts,
         totalBenefitAllCohorts: r.totalBenefitAllCohorts,
-        totalNetBenefitAllCohorts: r.netBenefitAllCohorts
+        netBenefitAllCohorts: r.netBenefitAllCohorts,
+        bcr: r.bcr
     };
 
-    const existingIndex = state.scenarios.findIndex(s => s.name === name);
-    if (existingIndex !== -1) {
-        state.scenarios[existingIndex] = scenario;
-    } else {
-        state.scenarios.push(scenario);
-    }
-
-    try {
-        window.localStorage.setItem("stepsScenarios", JSON.stringify(state.scenarios));
-    } catch (e) {}
-
-    renderScenarioTable();
-    showToast("Scenario saved to portfolio.", "success");
-    updateNationalCharts(state.lastResults);
+    state.scenarios.push(scenario);
+    updateScenarioTable();
+    updateNationalCharts(r);
+    showToast("Scenario saved for comparison.", "success");
 }
 
-function renderScenarioTable() {
+function updateScenarioTable() {
     const tbody = document.querySelector("#scenario-table tbody");
     if (!tbody) return;
 
     tbody.innerHTML = "";
 
-    state.scenarios.forEach(s => {
+    if (!state.scenarios.length) {
         const tr = document.createElement("tr");
-
-        const programmeTierLabel = {
-            frontline: "Frontline (3 months)",
-            intermediate: "Intermediate (12 months)",
-            advanced: "Advanced (24 months)"
-        }[s.tier] || s.tier;
-
-        const mentorshipLabel = {
-            low: "Low mentorship",
-            medium: "Medium mentorship",
-            high: "High mentorship"
-        }[s.mentorship] || s.mentorship;
-
-        const responseLabel = {
-            30: "Within 30 days",
-            15: "Within 15 days",
-            7: "Within 7 days"
-        }[s.response] || `${s.response} days`;
-
-        const modelLabel = s.model === "lc2"
-            ? "Supportive group (latent class)"
-            : "Average mixed logit";
-
-        const endorsementStr = s.endorsementRate !== null && isFinite(s.endorsementRate)
-            ? formatPercent(s.endorsementRate, 1)
-            : "-";
-
         tr.innerHTML = `
-            <td>${s.name}</td>
-            <td>${programmeTierLabel}</td>
-            <td>${mentorshipLabel}</td>
-            <td>${responseLabel}</td>
-            <td>${formatNumber(s.numberOfCohorts, 0)}</td>
+            <td colspan="8" class="scenario-empty-row">
+                No saved scenarios yet. Apply a configuration and use “Save scenario” to add it here.
+            </td>
+        `;
+        tbody.appendChild(tr);
+        return;
+    }
+
+    state.scenarios.forEach((s, index) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td>${index + 1}</td>
+            <td>
+                <div class="scenario-name-cell">${s.name}</div>
+                ${s.notes ? `<div class="scenario-notes-cell">${s.notes}</div>` : ""}
+            </td>
+            <td>${s.tier}</td>
             <td>${formatNumber(s.traineesPerCohort, 0)}</td>
-            <td>${formatCurrency(s.costPerTraineePerMonth, state.currency)}</td>
-            <td>${modelLabel}</td>
-            <td>${endorsementStr}</td>
+            <td>${formatNumber(s.numberOfCohorts, 0)}</td>
+            <td>${formatCurrency(s.totalCostAllCohorts, state.currency)}</td>
+            <td>${formatCurrency(s.totalBenefitAllCohorts, state.currency)}</td>
             <td>${(s.bcr !== null && isFinite(s.bcr)) ? s.bcr.toFixed(2) : "-"}</td>
-            <td>${formatCurrency(s.totalNetBenefitAllCohorts, state.currency)}</td>
+            <td>${formatPercent(s.endorsementRate, 1)}</td>
+            <td class="scenario-actions-cell">
+                <button type="button"
+                        class="btn btn-ghost btn-xs"
+                        data-action="apply"
+                        data-id="${s.id}">
+                    Load
+                </button>
+                <button type="button"
+                        class="btn btn-text btn-xs text-danger"
+                        data-action="delete"
+                        data-id="${s.id}">
+                    Remove
+                </button>
+            </td>
         `;
         tbody.appendChild(tr);
     });
-}
 
-function loadSavedScenarios() {
-    try {
-        const raw = window.localStorage.getItem("stepsScenarios");
-        if (raw) {
-            const parsed = JSON.parse(raw);
-            if (Array.isArray(parsed)) {
-                state.scenarios = parsed;
-            }
-        }
-    } catch (e) {
-        state.scenarios = [];
-    }
-    renderScenarioTable();
-}
-
-/* ===========================
-   Excel and PDF export
-   =========================== */
-
-/**
- * Export the saved scenario portfolio to Excel.
- * This keeps the original behaviour for the portfolio tab.
- */
-function exportScenariosToExcel() {
-    if (!window.XLSX) {
-        showToast("Excel export library not available.", "error");
-        return;
-    }
-
-    if (!state.scenarios.length) {
-        showToast("No scenarios saved yet.", "warning");
-        return;
-    }
-
-    const header = [
-        "Scenario name",
-        "Programme tier",
-        "Career incentive",
-        "Mentorship intensity",
-        "Delivery mode",
-        "Response time",
-        "Cost per trainee per month (INR)",
-        "Trainees per cohort",
-        "Number of cohorts",
-        "Preference model",
-        "Endorsement rate (%)",
-        "Opt out rate (%)",
-        "WTP per trainee per month (INR)",
-        "Economic cost per cohort (INR)",
-        "Benefit per cohort (INR)",
-        "Benefit cost ratio",
-        "Net benefit per cohort (INR)",
-        "Total economic cost all cohorts (INR)",
-        "Total benefit all cohorts (INR)",
-        "Total net benefit all cohorts (INR)",
-        "Graduates all cohorts",
-        "Outbreak responses per year",
-        "Notes"
-    ];
-
-    const rows = state.scenarios.map(s => {
-        const tierLabel = {
-            frontline: "Frontline (3 months)",
-            intermediate: "Intermediate (12 months)",
-            advanced: "Advanced (24 months)"
-        }[s.tier] || s.tier;
-
-        const careerLabel = {
-            certificate: "Government and partner certificate",
-            uniqual: "University qualification",
-            career_path: "Government career pathway"
-        }[s.career] || s.career;
-
-        const mentorshipLabel = {
-            low: "Low mentorship",
-            medium: "Medium mentorship",
-            high: "High mentorship"
-        }[s.mentorship] || s.mentorship;
-
-        const deliveryLabel = {
-            blended: "Blended delivery",
-            inperson: "Fully in person delivery",
-            online: "Fully online delivery"
-        }[s.delivery] || s.delivery;
-
-        const responseLabel = {
-            30: "Within 30 days",
-            15: "Within 15 days",
-            7: "Within 7 days"
-        }[s.response] || `${s.response} days`;
-
-        const modelLabel = s.model === "lc2"
-            ? "Supportive group (latent class)"
-            : "Average mixed logit";
-
-        return [
-            s.name,
-            tierLabel,
-            careerLabel,
-            mentorshipLabel,
-            deliveryLabel,
-            responseLabel,
-            s.costPerTraineePerMonth,
-            s.traineesPerCohort,
-            s.numberOfCohorts,
-            modelLabel,
-            s.endorsementRate,
-            s.optOutRate,
-            s.wtpConfig,
-            s.perCohortEconomicCost,
-            s.perCohortBenefit,
-            s.bcr,
-            s.perCohortNetBenefit,
-            s.totalCostAllCohorts,
-            s.totalBenefitAllCohorts,
-            s.totalNetBenefitAllCohorts,
-            s.graduatesAllCohorts,
-            s.outbreaksPerYearAllCohorts,
-            s.notes || ""
-        ];
-    });
-
-    const data = [header, ...rows];
-    const ws = XLSX.utils.aoa_to_sheet(data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "STEPS scenarios");
-    XLSX.writeFile(wb, "steps_fetp_scenarios.xlsx");
-    showToast("Excel file downloaded.", "success");
-}
-
-/**
- * Export the current policy configuration to a PDF brief.
- * This preserves the existing behaviour for the policy brief button.
- */
-function exportPolicyBriefPdf() {
-    const jspdf = window.jspdf;
-    if (!jspdf) {
-        showToast("PDF export library not available.", "error");
-        return;
-    }
-
-    if (!state.lastResults) {
-        showToast("Apply a configuration before exporting a policy brief.", "warning");
-        return;
-    }
-
-    const doc = new jspdf.jsPDF();
-
-    const r = state.lastResults;
-    const cfg = r.cfg;
-    const epi = r.epi;
-
-    const heading = "STEPS FETP India - Policy Brief";
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(14);
-    doc.text(heading, 14, 16);
-
-    doc.setFontSize(11);
-    doc.setFont("helvetica", "normal");
-    const scenarioTitle = cfg.scenarioName || "Current configuration";
-    doc.text(`Scenario: ${scenarioTitle}`, 14, 26);
-
-    const tierLabel = {
-        frontline: "Frontline (3 months)",
-        intermediate: "Intermediate (12 months)",
-        advanced: "Advanced (24 months)"
-    }[cfg.tier] || cfg.tier;
-
-    const careerLabel = {
-        certificate: "Government and partner certificate",
-        uniqual: "University qualification",
-        career_path: "Government career pathway"
-    }[cfg.career] || cfg.career;
-
-    const mentorshipLabel = {
-        low: "Low mentorship",
-        medium: "Medium mentorship",
-        high: "High mentorship"
-    }[cfg.mentorship] || cfg.mentorship;
-
-    const deliveryLabel = {
-        blended: "Blended delivery",
-        inperson: "Fully in person delivery",
-        online: "Fully online delivery"
-    }[cfg.delivery] || cfg.delivery;
-
-    const responseLabel = {
-        30: "Detect and respond within 30 days",
-        15: "Detect and respond within 15 days",
-        7: "Detect and respond within 7 days"
-    }[cfg.response] || `${cfg.response} days`;
-
-    let y = 34;
-    const lineGap = 6;
-
-    const lines = [
-        `Programme tier: ${tierLabel}`,
-        `Career incentive: ${careerLabel}`,
-        `Mentorship intensity: ${mentorshipLabel}`,
-        `Delivery mode: ${deliveryLabel}`,
-        `Expected response time: ${responseLabel}`,
-        `Trainees per cohort: ${cfg.traineesPerCohort}`,
-        `Number of cohorts: ${cfg.numberOfCohorts}`,
-        `Cost per trainee per month: ${formatCurrencyInr(cfg.costPerTraineePerMonth, 0)}`
-    ];
-
-    lines.forEach(text => {
-        doc.text(text, 14, y);
-        y += lineGap;
-    });
-
-    y += 2;
-    doc.setFont("helvetica", "bold");
-    doc.text("Endorsement and economic value", 14, y);
-    doc.setFont("helvetica", "normal");
-    y += lineGap;
-
-    const endorsePercent = r.util.endorseProb * 100;
-    const optPercent = r.util.optOutProb * 100;
-
-    const bcrText = r.bcr !== null && isFinite(r.bcr) ? r.bcr.toFixed(2) : "N/A";
-
-    const econLines = [
-        `Estimated endorsement: ${endorsePercent.toFixed(1)} percent of stakeholders would endorse this option.`,
-        `Estimated opt out: ${optPercent.toFixed(1)} percent would prefer not to invest in this option.`,
-        `Economic cost per cohort: ${formatCurrencyInr(r.costs.totalEconomicCostPerCohort, 0)}.`,
-        `Total economic cost (all cohorts): ${formatCurrencyInr(r.totalCostAllCohorts, 0)}.`,
-        `Total indicative benefit (all cohorts): ${formatCurrencyInr(r.totalBenefitAllCohorts, 0)}.`,
-        `Net benefit (all cohorts): ${formatCurrencyInr(r.netBenefitAllCohorts, 0)}.`,
-        `Benefit cost ratio: ${bcrText}.`
-    ];
-
-    econLines.forEach(text => {
-        doc.text(text, 14, y);
-        y += lineGap;
-    });
-
-    y += 2;
-    doc.setFont("helvetica", "bold");
-    doc.text("Epidemiological implications", 14, y);
-    doc.setFont("helvetica", "normal");
-    y += lineGap;
-
-    const epiLines = [
-        `Total FETP graduates: ${formatNumber(epi.graduatesAllCohorts, 0)} over all cohorts.`,
-        `Outbreak responses supported per year: ${formatNumber(epi.outbreaksPerYearAllCohorts, 1)}.`,
-        `Planning horizon: ${state.epiSettings.general.planningHorizonYears} years.`
-    ];
-
-    epiLines.forEach(text => {
-        doc.text(text, 14, y);
-        y += lineGap;
-    });
-
-    y += 2;
-    doc.setFont("helvetica", "bold");
-    doc.text("Assumptions and methods (short summary)", 14, y);
-    doc.setFont("helvetica", "normal");
-    y += lineGap;
-
-    const methodLines = [
-        "Preferences are based on a discrete choice experiment estimated using a mixed logit and a two class latent class model.",
-        "Endorsement probabilities compare the utility of any FETP option with the opt out alternative.",
-        "Cost estimates use cost per trainee per month combined with cohort size, programme duration and cost templates.",
-        "Monetary benefits reflect indicative values for additional graduates and outbreak responses over the planning horizon.",
-        "Full technical details are available in the STEPS Technical Appendix."
-    ];
-
-    methodLines.forEach(text => {
-        const wrapped = doc.splitTextToSize(text, 180);
-        wrapped.forEach(line => {
-            doc.text(line, 14, y);
-            y += 4.5;
-        });
-    });
-
-    doc.save("steps_fetp_policy_brief.pdf");
-    showToast("Policy brief PDF downloaded.", "success");
-}
-
-/**
- * Export the DCE sensitivity / benefits table to Excel.
- * This uses the same logic as the on-screen table so that
- * donors and funders receive a consistent set of numbers.
- */
-function exportDceSensitivityToExcel() {
-    if (!window.XLSX) {
-        showToast("Excel export library not available.", "error");
-        return;
-    }
-    if (!state.lastResults) {
-        showToast("Apply a configuration before exporting DCE benefits.", "warning");
-        return;
-    }
-
-    const comp = getSensitivityComputation(state.lastResults);
-    if (!comp) {
-        showToast("No sensitivity results available to export.", "warning");
-        return;
-    }
-
-    const { dceCba, epiActive, benefitMode, classFilter } = comp;
-    const { profiles, totalCostAllCohorts, epiOutbreakBenefitAllCohorts } = dceCba;
-
-    const header = [
-        "Model / class",
-        "Total economic cost (all cohorts, INR)",
-        "Total WTP (all cohorts, INR)",
-        "WTP from response capacity (all cohorts, INR)",
-        "Epi outbreak benefit (all cohorts, INR)",
-        "Endorsement rate (%)",
-        "Effective WTP (all cohorts, INR)",
-        "BCR (active)",
-        "NPV (active, INR)"
-    ];
-
-    const rows = [];
-    const keys = ["overall", "supportive", "conservative"];
-
-    keys.forEach(key => {
-        const p = profiles[key];
-        if (!p) return;
-        if (classFilter !== "all" && classFilter !== key) return;
-
-        const active = getActiveCbaValues(p, epiActive, benefitMode);
-        const epiBenefit = epiActive ? epiOutbreakBenefitAllCohorts : 0;
-        const endorsementPct = p.endorsementRate * 100;
-
-        rows.push([
-            p.label,
-            totalCostAllCohorts,
-            p.wtpAllCohorts,
-            p.wtpRespAllCohorts,
-            epiBenefit,
-            endorsementPct,
-            p.effectiveBenefitAllCohorts,
-            active.bcr,
-            active.npv
-        ]);
-    });
-
-    const data = [header, ...rows];
-    const ws = XLSX.utils.aoa_to_sheet(data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "DCE benefits sensitivity");
-    XLSX.writeFile(wb, "steps_fetp_dce_benefits_sensitivity.xlsx");
-    showToast("DCE benefits Excel file downloaded.", "success");
-}
-
-/**
- * Export the DCE sensitivity / benefits table to a PDF summary
- * that can be attached directly to donor reports.
- */
-function exportDceSensitivityToPdf() {
-    const jspdf = window.jspdf;
-    if (!jspdf) {
-        showToast("PDF export library not available.", "error");
-        return;
-    }
-    if (!state.lastResults) {
-        showToast("Apply a configuration before exporting DCE benefits.", "warning");
-        return;
-    }
-
-    const comp = getSensitivityComputation(state.lastResults);
-    if (!comp) {
-        showToast("No sensitivity results available to export.", "warning");
-        return;
-    }
-
-    const { dceCba, epiActive, benefitMode, classFilter } = comp;
-    const { profiles, totalCostAllCohorts, epiOutbreakBenefitAllCohorts } = dceCba;
-
-    const doc = new jspdf.jsPDF("landscape");
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(12);
-    doc.text("STEPS FETP India – DCE Benefits Sensitivity Summary", 14, 16);
-
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    const subtitle = `Benefit definition: ${benefitMode === "effectiveWtp" ? "endorsement-adjusted WTP" : "total WTP"}; Epi benefits: ${epiActive ? "included" : "excluded"}.`;
-    doc.text(subtitle, 14, 24);
-
-    const headers = [
-        "Model / class",
-        "Cost (INR)",
-        "Total WTP (INR)",
-        "WTP – response (INR)",
-        "Epi benefit (INR)",
-        "Endorsement (%)",
-        "Effective WTP (INR)",
-        "BCR (active)",
-        "NPV (active, INR)"
-    ];
-
-    const startY = 32;
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const margin = 10;
-    const usableWidth = pageWidth - margin * 2;
-    const colWidth = usableWidth / headers.length;
-
-    let y = startY;
-
-    // Header row
-    headers.forEach((h, idx) => {
-        const x = margin + idx * colWidth + 1;
-        doc.text(h, x, y);
-    });
-
-    y += 6;
-
-    const keys = ["overall", "supportive", "conservative"];
-
-    keys.forEach(key => {
-        const p = profiles[key];
-        if (!p) return;
-        if (classFilter !== "all" && classFilter !== key) return;
-
-        const active = getActiveCbaValues(p, epiActive, benefitMode);
-        const epiBenefit = epiActive ? epiOutbreakBenefitAllCohorts : 0;
-        const endorsementPct = p.endorsementRate * 100;
-
-        const rowValues = [
-            p.label,
-            formatCurrencyInr(totalCostAllCohorts, 0),
-            formatCurrencyInr(p.wtpAllCohorts, 0),
-            formatCurrencyInr(p.wtpRespAllCohorts, 0),
-            epiActive ? formatCurrencyInr(epiBenefit, 0) : "0",
-            endorsementPct.toFixed(1),
-            formatCurrencyInr(p.effectiveBenefitAllCohorts, 0),
-            (active.bcr !== null && isFinite(active.bcr)) ? active.bcr.toFixed(2) : "-",
-            formatCurrencyInr(active.npv, 0)
-        ];
-
-        rowValues.forEach((val, idx) => {
-            const x = margin + idx * colWidth + 1;
-            doc.text(String(val), x, y);
-        });
-
-        y += 6;
-        if (y > doc.internal.pageSize.getHeight() - 14) {
-            doc.addPage();
-            y = 16;
-        }
-    });
-
-    doc.save("steps_fetp_dce_benefits_sensitivity.pdf");
-    showToast("DCE benefits PDF downloaded.", "success");
-}
-
-/* ===========================
-   Modal snapshot
-   =========================== */
-
-function openResultsModal(results) {
-    const modal = document.getElementById("results-modal");
-    const body = document.getElementById("modal-body");
-    if (!modal || !body) return;
-
-    const r = results;
-    const cfg = r.cfg;
-
-    const tierLabel = {
-        frontline: "Frontline (3 months)",
-        intermediate: "Intermediate (12 months)",
-        advanced: "Advanced (24 months)"
-    }[cfg.tier] || cfg.tier;
-
-    const careerLabel = {
-        certificate: "Government and partner certificate",
-        uniqual: "University qualification",
-        career_path: "Government career pathway"
-    }[cfg.career] || cfg.career;
-
-    const mentorshipLabel = {
-        low: "Low mentorship",
-        medium: "Medium mentorship",
-        high: "High mentorship"
-    }[cfg.mentorship] || cfg.mentorship;
-
-    const deliveryLabel = {
-        blended: "Blended delivery",
-        inperson: "Fully in person delivery",
-        online: "Fully online delivery"
-    }[cfg.delivery] || cfg.delivery;
-
-    const responseLabel = {
-        30: "Detect and respond within 30 days",
-        15: "Detect and respond within 15 days",
-        7: "Detect and respond within 7 days"
-    }[cfg.response] || `${cfg.response} days`;
-
-    const endorsePercent = r.util.endorseProb * 100;
-    const bcrText = r.bcr !== null && isFinite(r.bcr) ? r.bcr.toFixed(2) : "N/A";
-
-    body.innerHTML = `
-        <div class="card config-summary-card">
-            <h3>Configuration</h3>
-            <div class="config-summary">
-                <div class="config-summary-row">
-                    <div class="config-summary-label">Programme tier</div>
-                    <div class="config-summary-value">${tierLabel}</div>
-                </div>
-                <div class="config-summary-row">
-                    <div class="config-summary-label">Career incentive</div>
-                    <div class="config-summary-value">${careerLabel}</div>
-                </div>
-                <div class="config-summary-row">
-                    <div class="config-summary-label">Mentorship intensity</div>
-                    <div class="config-summary-value">${mentorshipLabel}</div>
-                </div>
-                <div class="config-summary-row">
-                    <div class="config-summary-label">Delivery mode</div>
-                    <div class="config-summary-value">${deliveryLabel}</div>
-                </div>
-                <div class="config-summary-row">
-                    <div class="config-summary-label">Response time</div>
-                    <div class="config-summary-value">${responseLabel}</div>
-                </div>
-                <div class="config-summary-row">
-                    <div class="config-summary-label">Cost per trainee per month</div>
-                    <div class="config-summary-value">${formatCurrency(cfg.costPerTraineePerMonth, state.currency)}</div>
-                </div>
-                <div class="config-summary-row">
-                    <div class="config-summary-label">Trainees per cohort</div>
-                    <div class="config-summary-value">${formatNumber(cfg.traineesPerCohort, 0)}</div>
-                </div>
-                <div class="config-summary-row">
-                    <div class="config-summary-label">Number of cohorts</div>
-                    <div class="config-summary-value">${formatNumber(cfg.numberOfCohorts, 0)}</div>
-                </div>
-            </div>
-        </div>
-        <hr class="divider">
-        <div class="grid-two">
-            <div>
-                <h3>Endorsement summary</h3>
-                <p>Estimated endorsement is ${formatPercent(endorsePercent, 1)} of stakeholders, with ${formatPercent(100 - endorsePercent, 1)} choosing the opt out option instead of this configuration.</p>
-                <p>This reflects how attractive the programme design is relative to the no investment alternative, based on the discrete choice experiment estimates.</p>
-            </div>
-            <div>
-                <h3>Economic and epidemiological results</h3>
-                <p>Total economic cost across all cohorts is ${formatCurrency(r.totalCostAllCohorts, state.currency)}, with indicative total benefits of ${formatCurrency(r.totalBenefitAllCohorts, state.currency)}.</p>
-                <p>The net benefit is ${formatCurrency(r.netBenefitAllCohorts, state.currency)} and the benefit cost ratio is ${bcrText}.</p>
-                <p>The configuration yields about ${formatNumber(r.epi.graduatesAllCohorts, 0)} graduates and supports roughly ${formatNumber(r.epi.outbreaksPerYearAllCohorts, 1)} outbreak responses per year across all cohorts.</p>
-            </div>
-        </div>
-    `;
-
-    modal.classList.remove("hidden");
-}
-
-function setupModal() {
-    const modal = document.getElementById("results-modal");
-    const closeBtn = document.getElementById("close-modal");
-    if (!modal || !closeBtn) return;
-
-    closeBtn.addEventListener("click", () => {
-        modal.classList.add("hidden");
-    });
-
-    modal.addEventListener("click", (e) => {
-        if (e.target === modal) modal.classList.add("hidden");
-    });
-
-    document.addEventListener("keydown", (e) => {
-        if (e.key === "Escape") {
-            modal.classList.add("hidden");
-        }
-    });
-}
-
-/* ===========================
-   Guided tour
-   =========================== */
-
-function ensureTourElements() {
-    let overlay = document.getElementById("tour-overlay");
-    let popover = document.getElementById("tour-popover");
-
-    if (!overlay) {
-        overlay = document.createElement("div");
-        overlay.id = "tour-overlay";
-        overlay.className = "tour-overlay hidden";
-        document.body.appendChild(overlay);
-    }
-
-    if (!popover) {
-        popover = document.createElement("div");
-        popover.id = "tour-popover";
-        popover.className = "tour-popover hidden";
-        popover.innerHTML = `
-            <div class="tour-popover-header">
-                <h3 id="tour-title"></h3>
-                <button class="tour-close-btn" id="tour-close-btn" aria-label="Close tour">×</button>
-            </div>
-            <div class="tour-popover-body" id="tour-body"></div>
-            <div class="tour-popover-footer">
-                <span class="tour-step-indicator" id="tour-step-indicator"></span>
-                <div class="tour-buttons">
-                    <button class="btn-ghost-small" id="tour-prev">Back</button>
-                    <button class="btn-primary-small" id="tour-next">Next</button>
-                </div>
-            </div>
-        `;
-        document.body.appendChild(popover);
-    }
-
-    let trigger = document.getElementById("tour-trigger-floating");
-    if (!trigger) {
-        trigger = document.createElement("button");
-        trigger.id = "tour-trigger-floating";
-        trigger.className = "btn-ghost-small";
-        trigger.style.position = "fixed";
-        trigger.style.left = "14px";
-        trigger.style.bottom = "18px";
-        trigger.style.zIndex = "65";
-        trigger.innerHTML = `<span class="tour-icon">?</span><span> Quick tour</span>`;
-        document.body.appendChild(trigger);
-    }
-
-    trigger.addEventListener("click", () => startTour(true));
-}
-
-const TOUR_STEPS = [
-    {
-        tab: "intro",
-        selector: "#tab-intro .card:first-child",
-        title: "Welcome to STEPS",
-        text: "This panel explains what STEPS does and how it links preferences, costs and simple epidemiological outputs. Use it as a quick orientation when introducing the tool to policy colleagues."
-    },
-    {
-        tab: "config",
-        selector: "#tab-config .card:first-child",
-        title: "Configure an FETP scale up option",
-        text: "Here you select programme tier, career incentives, mentorship intensity, delivery mode, response time, cohort size and the number of cohorts. These choices drive endorsement, costs and benefits."
-    },
-    {
-        tab: "config",
-        selector: "#config-summary-card",
-        title: "Configuration at a glance",
-        text: "This summary card translates the current configuration into a simple snapshot, including endorsement and a headline recommendation for use in business cases."
-    },
-    {
-        tab: "results",
-        selector: "#tab-results .card:first-child",
-        title: "Endorsement and opt out",
-        text: "The Results tab shows predicted endorsement from the discrete choice experiment and how many stakeholders would prefer to opt out under the current design."
-    },
-    {
-        tab: "results",
-        selector: "#tab-results .card:nth-child(2)",
-        title: "Costs and economic value",
-        text: "This card summarises economic costs and indicative benefits per cohort, together with the benefit cost ratio and net benefit for the current configuration."
-    },
-    {
-        tab: "costing",
-        selector: "#tab-costing .card:nth-child(2)",
-        title: "Costing details",
-        text: "Costing details break the programme budget into staff, travel, materials, supervision and overheads. Switching templates helps compare WHO, NIE and NCDC assumptions."
-    },
-    {
-        tab: "natsim",
-        selector: "#tab-natsim .card",
-        title: "National simulation",
-        text: "The national simulation scales costs, benefits, graduates and outbreak responses by the number of cohorts, helping you discuss country level implications quickly."
-    },
-    {
-        tab: "sensitivity",
-        selector: "#tab-sensitivity .card:first-child",
-        title: "DCE benefits and sensitivity",
-        text: "This tab now lets you adjust endorsement, benefit multipliers and outbreak assumptions directly and see the recalculated DCE-based benefit cost ratios and net benefits for each model."
-    },
-    {
-        tab: "technical",
-        selector: "#tab-technical .card:first-child",
-        title: "Advanced settings and assumptions",
-        text: "Technical users can adjust epidemiological multipliers and display exchange rates here during workshops, without editing the code."
-    },
-    {
-        tab: "technical",
-        selector: "#tab-technical .card:nth-child(2)",
-        title: "Technical appendix",
-        text: "For detailed methods, including worked numerical examples, use the Technical Appendix. It is written for policy audiences and can be opened in a separate window."
-    }
-];
-
-function showTabFromTour(tabId) {
-    const btn = document.querySelector(`.tab-link[data-tab="${tabId}"]`);
-    const panel = document.getElementById(`tab-${tabId}`);
-    if (btn && panel) {
-        document.querySelectorAll(".tab-link").forEach(b => b.classList.remove("active"));
-        document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
-        btn.classList.add("active");
-        panel.classList.add("active");
+    if (!tbody.dataset.bound) {
+        tbody.addEventListener("click", handleScenarioTableClick);
+        tbody.dataset.bound = "1";
     }
 }
 
-function renderTourStep() {
-    const overlay = document.getElementById("tour-overlay");
-    const popover = document.getElementById("tour-popover");
-    if (!overlay || !popover) return;
+function handleScenarioTableClick(event) {
+    const btn = event.target.closest("button[data-action]");
+    if (!btn) return;
 
-    const step = TOUR_STEPS[state.tour.stepIndex];
-    if (!step) {
-        endTour();
-        return;
-    }
+    const idStr = btn.getAttribute("data-id");
+    const action = btn.getAttribute("data-action");
+    if (!idStr || !action) return;
 
-    showTabFromTour(step.tab);
+    const id = parseInt(idStr, 10);
+    if (!isFinite(id)) return;
 
-    const target = document.querySelector(step.selector);
-
-    const titleEl = document.getElementById("tour-title");
-    const bodyEl = document.getElementById("tour-body");
-    const indicatorEl = document.getElementById("tour-step-indicator");
-    const prevBtn = document.getElementById("tour-prev");
-    const nextBtn = document.getElementById("tour-next");
-
-    titleEl.textContent = step.title;
-    bodyEl.textContent = step.text;
-    indicatorEl.textContent = `Step ${state.tour.stepIndex + 1} of ${TOUR_STEPS.length}`;
-
-    prevBtn.disabled = state.tour.stepIndex === 0;
-    nextBtn.textContent = state.tour.stepIndex === TOUR_STEPS.length - 1 ? "Finish" : "Next";
-
-    overlay.classList.remove("hidden");
-    popover.classList.remove("hidden");
-
-    let top = 100;
-    let left = 60;
-
-    if (target) {
-        const rect = target.getBoundingClientRect();
-        const width = 320;
-        const height = 160;
-        top = Math.max(20, rect.top + window.scrollY + rect.height + 8);
-        if (top + height > window.scrollY + window.innerHeight - 20) {
-            top = Math.max(20, rect.top + window.scrollY - height - 8);
-        }
-        left = Math.max(20, rect.left + window.scrollX);
-        if (left + width > window.scrollX + window.innerWidth - 20) {
-            left = window.scrollX + window.innerWidth - width - 20;
-        }
-    }
-
-    popover.style.top = `${top}px`;
-    popover.style.left = `${left}px`;
-}
-
-function startTour(forceRestart) {
-    if (!forceRestart && state.tour.seen) return;
-    state.tour.active = true;
-    state.tour.stepIndex = 0;
-    state.tour.seen = true;
-    try {
-        window.localStorage.setItem("stepsTourSeen_v2", "1");
-    } catch (e) {}
-    renderTourStep();
-}
-
-function endTour() {
-    const overlay = document.getElementById("tour-overlay");
-    const popover = document.getElementById("tour-popover");
-    if (overlay) overlay.classList.add("hidden");
-    if (popover) popover.classList.add("hidden");
-    state.tour.active = false;
-}
-
-function setupTour() {
-    ensureTourElements();
-
-    try {
-        state.tour.seen = window.localStorage.getItem("stepsTourSeen_v2") === "1";
-    } catch (e) {
-        state.tour.seen = false;
-    }
-
-    const overlay = document.getElementById("tour-overlay");
-    const prevBtn = document.getElementById("tour-prev");
-    const nextBtn = document.getElementById("tour-next");
-    const closeBtn = document.getElementById("tour-close-btn");
-
-    const headerTrigger = document.getElementById("btn-start-tour");
-    if (headerTrigger && !headerTrigger.dataset.tourBound) {
-        headerTrigger.addEventListener("click", () => startTour(true));
-        headerTrigger.dataset.tourBound = "1";
-    }
-
-    if (overlay) {
-        overlay.addEventListener("click", () => endTour());
-    }
-
-    if (prevBtn) {
-        prevBtn.addEventListener("click", () => {
-            if (state.tour.stepIndex > 0) {
-                state.tour.stepIndex -= 1;
-                renderTourStep();
-            }
-        });
-    }
-
-    if (nextBtn) {
-        nextBtn.addEventListener("click", () => {
-            if (state.tour.stepIndex < TOUR_STEPS.length - 1) {
-                state.tour.stepIndex += 1;
-                renderTourStep();
-            } else {
-                endTour();
-            }
-        });
-    }
-
-    if (closeBtn) {
-        closeBtn.addEventListener("click", () => endTour());
-    }
-
-    document.addEventListener("keydown", (e) => {
-        if (!state.tour.active) return;
-        if (e.key === "Escape") endTour();
-        if (e.key === "ArrowRight") {
-            if (state.tour.stepIndex < TOUR_STEPS.length - 1) {
-                state.tour.stepIndex += 1;
-                renderTourStep();
-            }
-        }
-        if (e.key === "ArrowLeft") {
-            if (state.tour.stepIndex > 0) {
-                state.tour.stepIndex -= 1;
-                renderTourStep();
-            }
-        }
-    });
-
-    if (!state.tour.seen) {
-        startTour(false);
+    if (action === "apply") {
+        applyScenarioById(id);
+    } else if (action === "delete") {
+        deleteScenarioById(id);
     }
 }
 
-/* ===========================
-   Technical appendix preview
-   =========================== */
+function applyScenarioById(id) {
+    const s = state.scenarios.find(sc => sc.id === id);
+    if (!s) return;
 
-function setupTechnicalAppendix() {
-    const button = document.getElementById("open-technical-window");
-    if (button) {
-        button.addEventListener("click", () => {
-            window.open("technical-appendix.html", "_blank", "noopener");
-        });
+    const tierEl = document.getElementById("program-tier");
+    const careerEl = document.getElementById("career-track");
+    const mentorEl = document.getElementById("mentorship");
+    const deliveryEl = document.getElementById("delivery");
+    const responseEl = document.getElementById("response");
+    const costEl = document.getElementById("cost-slider");
+    const traineesEl = document.getElementById("trainees");
+    const cohortsEl = document.getElementById("cohorts");
+    const nameEl = document.getElementById("scenario-name");
+    const notesEl = document.getElementById("scenario-notes");
+    const modelSelect = document.getElementById("model-select");
+
+    if (tierEl) tierEl.value = s.tier;
+    if (careerEl) careerEl.value = s.career;
+    if (mentorEl) mentorEl.value = s.mentorship;
+    if (deliveryEl) deliveryEl.value = s.delivery;
+    if (responseEl) responseEl.value = String(s.response);
+    if (costEl) costEl.value = s.costPerTraineePerMonth;
+    if (traineesEl) traineesEl.value = s.traineesPerCohort;
+    if (cohortsEl) cohortsEl.value = s.numberOfCohorts;
+    if (nameEl) nameEl.value = s.name || "";
+    if (notesEl) notesEl.value = s.notes || "";
+
+    state.model = s.model || "mxl";
+    if (modelSelect) {
+        modelSelect.value = state.model;
     }
 
-    const preview = document.getElementById("technical-preview");
-    if (preview) {
-        preview.innerHTML = "The technical appendix summarises the discrete choice experiment models, cost templates and epidemiological multipliers used in STEPS. It includes step by step numerical examples that match the scenarios shown in this tool, such as Advanced programmes with high mentorship and rapid response times.";
-    }
-}
+    populateCostSourceOptions(s.tier);
 
-/* ===========================
-   Configuration and events
-   =========================== */
-
-function applyConfiguration(silent) {
     const cfg = readConfigurationFromInputs();
-    state.currentTier = cfg.tier;
-
-    const costDisplay = document.getElementById("cost-display");
-    if (costDisplay) {
-        costDisplay.textContent = formatCurrency(cfg.costPerTraineePerMonth, state.currency);
-    }
-
-    populateCostSourceOptions(cfg.tier);
-
     const results = computeFullResults(cfg);
-    refreshAll(results, { skipToast: silent });
+    refreshAll(results);
     updateAssumptionLog(cfg);
+    showToast("Scenario loaded into controls.", "success");
 }
 
-function setupCoreInteractions() {
-    const costSlider = document.getElementById("cost-slider");
-    const costDisplay = document.getElementById("cost-display");
-    if (costSlider && costDisplay) {
-        costSlider.addEventListener("input", () => {
-            const value = parseFloat(costSlider.value) || 0;
-            costDisplay.textContent = formatCurrency(value, state.currency);
-        });
+function deleteScenarioById(id) {
+    const before = state.scenarios.length;
+    state.scenarios = state.scenarios.filter(sc => sc.id !== id);
+    if (state.scenarios.length !== before) {
+        updateScenarioTable();
+        const baseResults = state.lastResults
+            ? state.lastResults
+            : computeFullResults(readConfigurationFromInputs());
+        updateNationalCharts(baseResults);
+        showToast("Scenario removed from comparison table.", "success");
     }
+}
 
-    const tierSelect = document.getElementById("program-tier");
-    if (tierSelect) {
-        tierSelect.addEventListener("change", () => {
-            state.currentTier = tierSelect.value;
-            populateCostSourceOptions(state.currentTier);
-        });
-    }
+/* ===========================
+   Configuration controls
+   =========================== */
 
-    const modelButtons = document.querySelectorAll(".pill-toggle[data-model]");
-    modelButtons.forEach(btn => {
-        btn.addEventListener("click", () => {
-            modelButtons.forEach(b => b.classList.remove("active"));
-            btn.classList.add("active");
-            state.model = btn.dataset.model || "mxl";
-            if (state.lastResults) {
-                const cfg = state.lastResults.cfg;
-                const results = computeFullResults(cfg);
-                refreshAll(results, { skipToast: true });
-            }
-        });
-    });
+function updateCostSliderDisplay() {
+    const slider = document.getElementById("cost-slider");
+    const label = document.getElementById("cost-slider-value");
+    if (!slider || !label) return;
 
-    const currencyButtons = document.querySelectorAll(".pill-toggle[data-currency]");
-    currencyButtons.forEach(btn => {
-        btn.addEventListener("click", () => {
-            currencyButtons.forEach(b => b.classList.remove("active"));
-            btn.classList.add("active");
-            state.currency = btn.dataset.currency || "INR";
-            if (state.lastResults) {
-                updateConfigSummary(state.lastResults);
-                updateResultsTab(state.lastResults);
-                updateCostingTab(state.lastResults);
-                updateNationalSimulation(state.lastResults);
-                updateSensitivityTab(state.lastResults);
-            }
-        });
-    });
+    const value = parseFloat(slider.value) || 0;
+    label.textContent = formatCurrency(value, state.currency);
+}
 
-    const oppToggle = document.getElementById("opp-toggle");
-    if (oppToggle) {
-        oppToggle.addEventListener("click", () => {
-            state.includeOpportunityCost = !state.includeOpportunityCost;
-            oppToggle.classList.toggle("on", state.includeOpportunityCost);
-            const labelEl = oppToggle.querySelector(".switch-label");
-            if (labelEl) {
-                labelEl.textContent = state.includeOpportunityCost
-                    ? "Opportunity cost included"
-                    : "Opportunity cost excluded";
-            }
-            if (state.lastResults) {
-                const cfg = state.lastResults.cfg;
-                const results = computeFullResults(cfg);
-                refreshAll(results, { skipToast: true });
-            }
-        });
-    }
-
-    const applyBtn = document.getElementById("update-results");
-    if (applyBtn) {
+function setupMainControls() {
+    const applyBtn = document.getElementById("apply-config-btn");
+    if (applyBtn && !applyBtn.dataset.bound) {
         applyBtn.addEventListener("click", () => {
-            applyConfiguration(false);
+            const cfg = readConfigurationFromInputs();
+            const results = computeFullResults(cfg);
+            refreshAll(results);
+            updateAssumptionLog(cfg);
         });
+        applyBtn.dataset.bound = "1";
     }
 
-    const snapshotBtn = document.getElementById("open-snapshot");
-    if (snapshotBtn) {
-        snapshotBtn.addEventListener("click", () => {
-            if (!state.lastResults) {
-                applyConfiguration(true);
-            }
-            if (state.lastResults) {
-                openResultsModal(state.lastResults);
-                showToast("Snapshot opened. Review scenario summary and recommendation.", "info");
-            }
-        });
-    }
-
-    const saveBtn = document.getElementById("save-scenario");
-    if (saveBtn) {
-        saveBtn.addEventListener("click", () => {
-            if (!state.lastResults) {
-                applyConfiguration(true);
-            }
+    const saveScenarioBtn = document.getElementById("save-scenario-btn");
+    if (saveScenarioBtn && !saveScenarioBtn.dataset.bound) {
+        saveScenarioBtn.addEventListener("click", () => {
             saveScenarioFromCurrentResults();
         });
+        saveScenarioBtn.dataset.bound = "1";
     }
 
-    const advApply = document.getElementById("advanced-apply");
-    if (advApply) {
-        advApply.addEventListener("click", () => applyAdvancedSettings());
-    }
-    const advReset = document.getElementById("advanced-reset");
-    if (advReset) {
-        advReset.addEventListener("click", () => resetAdvancedSettings());
-    }
-
-    const exportExcelBtn = document.getElementById("export-excel");
-    if (exportExcelBtn) {
-        exportExcelBtn.addEventListener("click", () => exportScenariosToExcel());
-    }
-    const exportPdfBtn = document.getElementById("export-pdf");
-    if (exportPdfBtn) {
-        exportPdfBtn.addEventListener("click", () => exportPolicyBriefPdf());
-    }
-
-    const epiBenefitToggle = document.getElementById("dce-epi-benefit-toggle");
-    if (epiBenefitToggle) {
-        epiBenefitToggle.addEventListener("change", () => {
-            if (state.lastResults) updateSensitivityTab(state.lastResults);
+    const clearScenariosBtn = document.getElementById("clear-scenarios-btn");
+    if (clearScenariosBtn && !clearScenariosBtn.dataset.bound) {
+        clearScenariosBtn.addEventListener("click", () => {
+            state.scenarios = [];
+            updateScenarioTable();
+            const baseResults = state.lastResults
+                ? state.lastResults
+                : computeFullResults(readConfigurationFromInputs());
+            updateNationalCharts(baseResults);
+            showToast("All saved scenarios cleared.", "warning");
         });
+        clearScenariosBtn.dataset.bound = "1";
     }
 
-    // Sensitivity controls: endorsement override and multipliers
-    const endorsementRateInput =
+    const modelSelect = document.getElementById("model-select");
+    if (modelSelect && !modelSelect.dataset.bound) {
+        modelSelect.addEventListener("change", () => {
+            const val = (modelSelect.value || "").toLowerCase();
+            if (val === "lc2" || val === "supportive") {
+                state.model = "lc2";
+            } else if (val === "lc1" || val === "conservative") {
+                state.model = "lc1";
+            } else {
+                state.model = "mxl";
+            }
+            const cfg = readConfigurationFromInputs();
+            const results = computeFullResults(cfg);
+            refreshAll(results);
+            updateAssumptionLog(cfg);
+        });
+        modelSelect.dataset.bound = "1";
+    }
+
+    const currencySelect = document.getElementById("currency-select");
+    if (currencySelect && !currencySelect.dataset.bound) {
+        currencySelect.addEventListener("change", () => {
+            const val = (currencySelect.value || "").toUpperCase();
+            state.currency = (val === "USD") ? "USD" : "INR";
+            if (state.lastResults) {
+                refreshAll(state.lastResults, { skipToast: true });
+            }
+            updateCostSliderDisplay();
+        });
+        currencySelect.dataset.bound = "1";
+    } else {
+        const inrBtn = document.getElementById("currency-inr");
+        const usdBtn = document.getElementById("currency-usd");
+        if (inrBtn && usdBtn && !inrBtn.dataset.bound) {
+            const handler = () => {
+                state.currency = usdBtn.checked ? "USD" : "INR";
+                if (state.lastResults) {
+                    refreshAll(state.lastResults, { skipToast: true });
+                }
+                updateCostSliderDisplay();
+            };
+            inrBtn.addEventListener("change", handler);
+            usdBtn.addEventListener("change", handler);
+            inrBtn.dataset.bound = "1";
+            usdBtn.dataset.bound = "1";
+        }
+    }
+
+    const oppToggle = document.getElementById("opp-cost-toggle");
+    if (oppToggle && !oppToggle.dataset.bound) {
+        state.includeOpportunityCost = !!oppToggle.checked;
+        oppToggle.addEventListener("change", () => {
+            state.includeOpportunityCost = !!oppToggle.checked;
+            const cfg = readConfigurationFromInputs();
+            const results = computeFullResults(cfg);
+            refreshAll(results);
+        });
+        oppToggle.dataset.bound = "1";
+    }
+
+    const advApplyBtn = document.getElementById("adv-apply-btn");
+    if (advApplyBtn && !advApplyBtn.dataset.bound) {
+        advApplyBtn.addEventListener("click", applyAdvancedSettings);
+        advApplyBtn.dataset.bound = "1";
+    }
+
+    const advResetBtn = document.getElementById("adv-reset-btn");
+    if (advResetBtn && !advResetBtn.dataset.bound) {
+        advResetBtn.addEventListener("click", resetAdvancedSettings);
+        advResetBtn.dataset.bound = "1";
+    }
+
+    const costSlider = document.getElementById("cost-slider");
+    if (costSlider && !costSlider.dataset.bound) {
+        costSlider.addEventListener("input", updateCostSliderDisplay);
+        costSlider.dataset.bound = "1";
+        updateCostSliderDisplay();
+    }
+
+    const sensEndorseInput =
         document.getElementById("sens-endorsement-rate") ||
         document.getElementById("dce-endorsement-rate");
-    if (endorsementRateInput) {
-        endorsementRateInput.addEventListener("change", () => {
-            if (!state.lastResults) return;
-            updateSensitivityTab(state.lastResults);
+    if (sensEndorseInput && !sensEndorseInput.dataset.bound) {
+        sensEndorseInput.addEventListener("input", () => {
+            if (state.lastResults) updateSensitivityTab(state.lastResults);
         });
+        sensEndorseInput.dataset.bound = "1";
     }
 
-    const dceScaleInput = document.getElementById("sens-dce-benefit-scale");
-    if (dceScaleInput) {
-        dceScaleInput.addEventListener("input", () => {
-            if (!state.lastResults) return;
-            updateSensitivityTab(state.lastResults);
+    const sensDceScale = document.getElementById("sens-dce-benefit-scale");
+    if (sensDceScale && !sensDceScale.dataset.bound) {
+        sensDceScale.addEventListener("input", () => {
+            if (state.lastResults) updateSensitivityTab(state.lastResults);
         });
+        sensDceScale.dataset.bound = "1";
     }
 
-    const epiScaleInput = document.getElementById("sens-epi-benefit-scale");
-    if (epiScaleInput) {
-        epiScaleInput.addEventListener("input", () => {
-            if (!state.lastResults) return;
-            updateSensitivityTab(state.lastResults);
+    const sensEpiScale = document.getElementById("sens-epi-benefit-scale");
+    if (sensEpiScale && !sensEpiScale.dataset.bound) {
+        sensEpiScale.addEventListener("input", () => {
+            if (state.lastResults) updateSensitivityTab(state.lastResults);
         });
+        sensEpiScale.dataset.bound = "1";
     }
+
+    const dceBenefitDefinition = document.getElementById("dce-benefit-definition");
+    if (dceBenefitDefinition && !dceBenefitDefinition.dataset.bound) {
+        dceBenefitDefinition.addEventListener("change", () => {
+            if (state.lastResults) updateSensitivityTab(state.lastResults);
+        });
+        dceBenefitDefinition.dataset.bound = "1";
+    }
+
+    const dceClassFilter = document.getElementById("dce-class-filter");
+    if (dceClassFilter && !dceClassFilter.dataset.bound) {
+        dceClassFilter.addEventListener("change", () => {
+            if (state.lastResults) updateSensitivityTab(state.lastResults);
+        });
+        dceClassFilter.dataset.bound = "1";
+    }
+
+    const epiToggle = document.getElementById("dce-epi-benefit-toggle");
+    if (epiToggle && !epiToggle.dataset.bound) {
+        epiToggle.addEventListener("change", () => {
+            if (state.lastResults) updateSensitivityTab(state.lastResults);
+        });
+        epiToggle.dataset.bound = "1";
+    }
+
+    updateScenarioTable();
 }
 
 /* ===========================
@@ -3153,18 +2430,17 @@ function setupCoreInteractions() {
 document.addEventListener("DOMContentLoaded", () => {
     setupTabs();
     setupInfoTooltips();
-    setupModal();
-    setupCoreInteractions();
-    setupTechnicalAppendix();
 
-    populateAdvancedSettingsInputs();
-    updateAssumptionLog(readConfigurationFromInputs());
+    const cfg = readConfigurationFromInputs();
+    populateCostSourceOptions(cfg.tier);
+
+    const initialResults = computeFullResults(cfg);
+    state.lastResults = initialResults;
+    refreshAll(initialResults, { skipToast: true });
+    updateAssumptionLog(cfg);
+
+    setupMainControls();
 
     loadEpiConfigIfPresent();
     loadCostConfigIfPresent();
-
-    loadSavedScenarios();
-    setupTour();
-
-    applyConfiguration(true);
 });
