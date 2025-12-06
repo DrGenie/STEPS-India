@@ -946,7 +946,7 @@ function computeDceCbaProfiles(cfg, costs, epi, options) {
       bcrCombined,
       combinedEffectiveBenefit,
       npvCombinedEffective,
-      bcrCombinedEffective
+      bcrEffectiveTotal: bcrCombinedEffective
     };
   }
 
@@ -990,7 +990,7 @@ function computeDceCbaProfiles(cfg, costs, epi, options) {
       npvEffective: profiles.overall.npvEffective,
       bcrEffective: profiles.overall.bcrEffective,
       npvEffectiveTotal: profiles.overall.npvCombinedEffective,
-      bcrEffectiveTotal: profiles.overall.bcrCombinedEffective
+      bcrEffectiveTotal: profiles.overall.bcrEffectiveTotal
     },
     supporters: {
       B_WTP: profiles.supportive.wtpAllCohorts,
@@ -1004,7 +1004,7 @@ function computeDceCbaProfiles(cfg, costs, epi, options) {
       npvEffective: profiles.supportive.npvEffective,
       bcrEffective: profiles.supportive.bcrEffective,
       npvEffectiveTotal: profiles.supportive.npvCombinedEffective,
-      bcrEffectiveTotal: profiles.supportive.bcrCombinedEffective
+      bcrEffectiveTotal: profiles.supportive.bcrEffectiveTotal
     },
     conservative: {
       B_WTP: profiles.conservative.wtpAllCohorts,
@@ -1020,7 +1020,7 @@ function computeDceCbaProfiles(cfg, costs, epi, options) {
       npvEffectiveTotal:
         profiles.conservative.npvCombinedEffective,
       bcrEffectiveTotal:
-        profiles.conservative.bcrCombinedEffective
+        profiles.conservative.bcrEffectiveTotal
     }
   };
 
@@ -2591,7 +2591,7 @@ function exportScenariosToPdf() {
   let y = 40;
 
   doc.setFontSize(14);
-  doc.text("STEPS – Saved scenarios", 40, y);
+  doc.text("STEPS - Saved scenarios", 40, y);
   y += 20;
   doc.setFontSize(9);
 
@@ -2609,7 +2609,7 @@ function exportScenariosToPdf() {
     const epi = cells[18] ? cells[18].textContent.trim() : "";
 
     doc.text(
-      `${idx + 1}. ${name} – Tier: ${tier}; Cost: ${cost}; BCR: ${bcr}; Total WTP: ${wtp}; Net epi benefit: ${epi}`,
+      `${idx + 1}. ${name} - Tier: ${tier}; Cost: ${cost}; BCR: ${bcr}; Total WTP: ${wtp}; Net epi benefit: ${epi}`,
       40,
       y
     );
@@ -2660,7 +2660,7 @@ function exportSensitivityToPdf() {
   let y = 40;
 
   doc.setFontSize(14);
-  doc.text("STEPS – DCE benefit sensitivity", 40, y);
+  doc.text("STEPS - DCE benefit sensitivity", 40, y);
   y += 20;
   doc.setFontSize(9);
 
@@ -2742,10 +2742,8 @@ function buildCopilotScenarioJson(results) {
 }
 
 /*
-  Build a ready to paste Copilot prompt that:
-  - explains what the STEPS tool does
-  - embeds the scenario JSON
-  - asks Copilot to summarise and interpret.
+  Build a ready to paste Copilot prompt using the detailed
+  policy-briefing instructions.
 */
 function buildCopilotPrompt(results) {
   const scenarioJson = buildCopilotScenarioJson(results);
@@ -2753,24 +2751,24 @@ function buildCopilotPrompt(results) {
     ? JSON.stringify(scenarioJson, null, 2)
     : "{}";
 
-  return `You are helping interpret outputs from the "STEPS FETP India Decision Aid", a decision support tool developed for the India Field Epidemiology Training Program. The tool uses discrete choice experiment results and costing assumptions to predict programme endorsement, estimate willingness to pay (WTP) for different training designs, and combine these with epidemiological value assumptions to compute benefit-cost indicators.
+  return `Act as a senior health economist advising the Ministry of Health and Family Welfare in India on the national scale up of Field Epidemiology Training Programs (FETP). You are working with outputs from the "STEPS FETP India Decision Aid", which summarises scenarios that differ by programme tier (frontline, intermediate, advanced), career incentives, mentorship intensity, delivery mode, response time, cost per trainee per month, number of cohorts and model based outputs. The JSON you will receive contains, for each scenario, discrete choice experiment (DCE) based endorsement probabilities, willingness to pay (WTP) in Indian rupees, epidemiological benefits (graduates, outbreak responses and their monetary valuation), total economic costs (including opportunity cost), benefit cost ratios (BCR) and net benefits at national scale.
 
-The data below describe one specific training configuration that a policymaker is considering.
+Use the JSON provided below to reconstruct in clear language what the scenario represents. Describe the configuration in plain terms, including which FETP tier is being scaled, the size of the intake, the main design features (career pathway, mentorship, delivery mode and response time) and the implied cost per trainee and total economic cost across all cohorts. Explain the DCE endorsement results in intuitive language for Indian policy makers by stating what proportion of key stakeholders are predicted to support the configuration, and how this compares to what would be considered low, moderate or strong endorsement for a national scale up decision.
 
-Here is the scenario exported from the tool in JSON format:
+Interpret the DCE based WTP estimates as a monetary summary of how much stakeholders value the programme relative to the status quo. Compare total WTP for all cohorts with the total economic cost, and explain whether stakeholders appear willing to "pay" more, about the same or less than the programme is expected to cost. Discuss what this implies for political feasibility, acceptability to partners and the strength of the economic case from a preference based perspective. If WTP related to faster response time is reported separately, highlight how much additional value decision makers gain from moving from slower to faster response in terms of early detection and control of outbreaks.
+
+Summarise the epidemiological outputs by describing the expected number of graduates, the number of outbreak responses supported per year and the approximate monetary value of these benefits over the planning horizon. Explain what these figures mean for India’s surveillance and response capacity, including how the selected FETP tier contributes to front line detection, intermediate analysis or advanced leadership and mentoring in the system. Make clear whether the epidemiological benefit estimates, when combined with costs, produce a BCR that is clearly above one, close to one or below one, and what that means for value for money.
+
+Bring the results together into a concise policy interpretation aimed at senior decision makers in India. State explicitly whether the configuration appears highly attractive, promising but needing refinement, or weak from a value for money perspective, taking into account endorsement levels, DCE based WTP, epidemiological benefits, total economic costs, BCR and net benefits. Where relevant, point out trade offs between tiers, for example whether frontline expansion gives broader coverage at lower cost or whether intermediate or advanced investments generate higher value per cohort but require more resources and stronger implementation capacity. Comment on affordability and fiscal space by relating the size of the total economic cost to the likely budget envelope for FETP scale up within the health system.
+
+Finally, provide concrete recommendations for policy makers. Indicate whether the scenario should be considered for national scale up, targeted scale up in selected states, further piloting or redesign. Suggest practical levers to improve the configuration for India, such as adjusting career incentives, strengthening mentorship, revising delivery mode or revisiting cost per trainee so that endorsement, WTP and BCR are improved. Present your answer as a short policy briefing with clear section headings and well structured paragraphs, without bullet points, and write in an accessible but analytically rigorous style suitable for cabinet notes, World Bank discussions and high level steering committee meetings.
+
+Here is the JSON export you should base your analysis on:
 
 \`\`\`json
 ${jsonText}
 \`\`\`
-
-Please:
-1. Summarise the key indicators in clear language for a Ministry of Health or World Bank audience (endorsement, total economic cost, total benefits, benefit-cost ratio, net benefit, and epidemiological outputs such as graduates and outbreak responses).
-2. Interpret what these numbers imply for the value for money of this configuration, highlighting whether it looks attractive, borderline, or poor compared with a generic threshold of a benefit-cost ratio of 1.
-3. Comment on how endorsement interacts with cost-effectiveness (for example, whether lower endorsement might limit the realised benefits even if the benefit-cost ratio looks strong).
-4. Suggest 2–3 short, concrete messages that could be included in a briefing note or slide deck for senior decision makers.
-5. List any important caveats or uncertainties that should be flagged when presenting these results.
-
-When interpreting monetary figures, remember that values are in Indian Rupees (INR) and usually refer to all cohorts over the planning horizon, not per year, unless otherwise indicated.`;
+`;
 }
 
 /*
@@ -2871,7 +2869,6 @@ function setupCopilotIntegration() {
   if (openBtn) {
     openBtn.addEventListener("click", () => {
       if (!state.lastResults) {
-        // Still open Copilot, but explain that there is no scenario yet
         window.open("https://copilot.microsoft.com/", "_blank");
         showToast(
           "Copilot opened. Apply a configuration in the tool, then use the Copilot buttons again to export a scenario.",
