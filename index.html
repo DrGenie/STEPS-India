@@ -34,6 +34,17 @@
     <div class="app-header-right">
         <span class="badge badge-primary">Policy decision aid</span>
         <span class="badge badge-outline">Version 1.0</span>
+
+        <!-- Open in Copilot button -->
+        <button id="btn-open-copilot"
+                class="btn-secondary-small"
+                type="button"
+                data-tour-step="copilot"
+                data-tour-title="Open in Copilot"
+                data-tour-content="Copies a detailed prompt and JSON export for the current scenario to your clipboard and opens Microsoft Copilot in a new tab. Paste the prompt into Copilot to generate a narrative report for decision makers.">
+            Open in Copilot
+        </button>
+
         <button id="btn-start-tour"
                 class="btn-ghost-small tour-trigger"
                 type="button"
@@ -90,14 +101,14 @@
                 <ul class="plain-list">
                     <li>Preferences and willingness-to-pay estimates from a discrete choice experiment with stakeholders.</li>
                     <li>Costing templates from WHO, NIE and NCDC for Frontline, Intermediate and Advanced programmes.</li>
-                    <li>Simple epidemiological multipliers that translate training scale-up and faster response times into public health benefits.</li>
+                    <li>Simple epidemiological multipliers that translate training scale-up and outbreak response times into health benefits.</li>
                 </ul>
                 <p>
-                    Users can set a programme configuration, see endorsement rates, willingness to pay, costs and benefit-cost ratios,
+                    Users can set a programme configuration, see endorsement rates, willingness to pay, costs and benefit cost ratios,
                     and compare saved scenarios side by side for business case discussions.
                 </p>
                 <p>
-                    The tool is designed to support rapid, transparent conversations with the Government of India
+                    The tool is designed to support transparent conversations with the Government of India
                     and other partners. It keeps all assumptions visible and connects preference
                     evidence directly to programme design, economic summaries and epidemiological implications.
                 </p>
@@ -235,7 +246,7 @@
                     <div class="attr-table-row">
                         <div class="attr-cell-title">Opt-out alternative</div>
                         <div class="attr-cell-levels">
-                            A status quo option where no new FETP training is funded under the scenario being considered.
+                            An opt-out option where no new FETP training is funded under the scenario being considered.
                         </div>
                         <div class="attr-cell-expl">
                             The discrete choice experiment included an explicit opt-out option. STEPS uses this as the
@@ -584,7 +595,7 @@
                         <span class="metric-label">Total economic cost per cohort</span>
                         <span class="metric-value" id="total-cost">-</span>
                         <p class="metric-caption">
-                            Programme cost plus opportunity cost where applicable. This is the main cost figure used in benefit–cost ratios.
+                            Programme cost plus opportunity cost where applicable. This is the main cost figure used in benefit cost ratios.
                         </p>
                     </div>
                 </div>
@@ -596,7 +607,7 @@
                     </p>
                 </div>
                 <div class="metric-single">
-                    <span class="metric-label">Benefit–cost ratio (per cohort)</span>
+                    <span class="metric-label">Benefit cost ratio (per cohort)</span>
                     <span class="metric-value" id="bcr">-</span>
                     <p class="metric-caption">
                         Total indicative epidemiological benefit per cohort divided by total economic cost per cohort. Values above one suggest that epidemiological benefits exceed costs on the assumptions used.
@@ -749,7 +760,7 @@
                             <span class="metric-value" id="nat-net-benefit">-</span>
                         </div>
                         <div class="metric-block">
-                            <span class="metric-label">National benefit–cost ratio</span>
+                            <span class="metric-label">National benefit cost ratio</span>
                             <span class="metric-value" id="nat-bcr">-</span>
                         </div>
                     </div>
@@ -761,7 +772,7 @@
                         </p>
                     </div>
                     <p class="hint">
-                        These values multiply the per cohort costs and benefits by the number of cohorts. The benefit–cost ratio
+                        These values multiply the per cohort costs and benefits by the number of cohorts. The benefit cost ratio
                         stays the same, but the absolute costs, epidemiological benefits and total WTP grow with scale.
                     </p>
                     <div class="chart-block">
@@ -807,13 +818,13 @@
         <div class="card"
              data-tour-step="sensitivity"
              data-tour-title="Sensitivity and DCE benefit definitions"
-             data-tour-content="This tab summarises how programme costs and different benefit definitions compare across the current configuration and any saved scenarios, using the discrete choice experiment, cost templates and epidemiological multipliers. It also reports willingness-to-pay benefits, outbreak-response contributions and benefit–cost metrics including benefit–cost ratios and net present values.">
+             data-tour-content="This tab summarises how programme costs and different benefit definitions compare across the current configuration and any saved scenarios, using the discrete choice experiment, cost templates and epidemiological multipliers. It also reports willingness-to-pay benefits, outbreak-response contributions and benefit cost metrics including benefit cost ratios and net present values.">
             <div class="card-header-with-info">
                 <h2>Sensitivity and DCE benefit summary</h2>
                 <button type="button"
                         class="info-icon"
                         aria-label="Sensitivity and DCE benefit summary information"
-                        data-tooltip="This table shows cost, willingness-to-pay and epidemiological benefit measures for the current configuration and each saved scenario, including benefit–cost ratios and endorsement-adjusted effective benefits.">
+                        data-tooltip="This table shows cost, willingness-to-pay and epidemiological benefit measures for the current configuration and each saved scenario, including benefit cost ratios and endorsement-adjusted effective benefits.">
                     i
                 </button>
             </div>
@@ -822,8 +833,8 @@
                 This tab brings together preference-based benefits from the discrete choice experiment and the cost and
                 epidemiological modules. It shows the total willingness-to-pay benefit associated with each configuration,
                 the share that is specifically linked to faster outbreak response, any additional outbreak-related benefits
-                from the epidemiological module when activated, and summary cost–benefit indicators such as the
-                benefit–cost ratio and net present value across different stakeholder groups.
+                from the epidemiological module when activated, and summary cost benefit indicators such as the
+                benefit cost ratio and net present value across different stakeholder groups.
             </p>
 
             <p>
@@ -831,7 +842,7 @@
                 into a compact sensitivity table. Each row represents a scenario, starting with the current configuration
                 and followed by any saved scenarios. For each scenario, STEPS recomputes endorsement, economic cost per
                 cohort, willingness-to-pay based benefits, outbreak-response contributions, epidemiological outbreak
-                benefits and combined benefit–cost metrics using the selected preference model and opportunity cost setting.
+                benefits and combined benefit cost metrics using the selected preference model and opportunity cost setting.
             </p>
             <p>
                 Use this table to compare how different benefit definitions perform relative to economic cost. You can
@@ -872,7 +883,7 @@
                         <label>
                             Include epidemiological outbreak benefits
                             <button type="button" class="info-icon" aria-label="Include outbreak benefits information"
-                                    data-tooltip="Turn this on to add outbreak-related benefits from the epidemiological module to DCE willingness-to-pay benefits in the combined benefit–cost indicators.">
+                                    data-tooltip="Turn this on to add outbreak-related benefits from the epidemiological module to DCE willingness-to-pay benefits in the combined benefit cost indicators.">
                                 i
                             </button>
                         </label>
@@ -882,7 +893,7 @@
                         </button>
                         <p class="hint">
                             When this switch is off, the epidemiological outbreak benefit column shows that outbreak benefits
-                            are not included and benefit–cost indicators reflect DCE willingness-to-pay only.
+                            are not included and benefit cost indicators reflect DCE willingness-to-pay only.
                         </p>
                     </div>
 
@@ -939,10 +950,10 @@
                 </p>
             </div>
 
-            <h3>Headline WTP-based benefits and cost–benefit metrics</h3>
+            <h3>Headline WTP-based benefits and cost benefit metrics</h3>
             <p class="hint">
                 The table below summarises programme costs, DCE willingness-to-pay benefits, outbreak-response contributions,
-                epidemiological outbreak benefits where applicable, endorsement-adjusted effective benefits and cost–benefit
+                epidemiological outbreak benefits where applicable, endorsement-adjusted effective benefits and cost benefit
                 indicators for each scenario over the chosen time horizon.
             </p>
 
@@ -964,9 +975,7 @@
                     </tr>
                     </thead>
                     <tbody id="dce-benefits-table-body">
-                    <!-- Filled dynamically from script.js:
-                         - One row per scenario (current configuration and saved scenarios)
-                         - Using selected benefit definition, stakeholder view and endorsement assumptions -->
+                    <!-- Filled dynamically from script.js -->
                     </tbody>
                 </table>
             </div>
@@ -977,8 +986,8 @@
                 outbreak-response column isolates the part of that value linked to faster detection and response. Epidemiological
                 outbreak benefits appear when the outbreak benefit switch is on and the epidemiological module is active. The
                 effective willingness-to-pay benefit scales total willingness to pay by the endorsement rate used in the
-                calculation. Benefit–cost ratios compare total benefits with total costs, while net present values show the
-                difference between benefits and costs in rupee terms. Values above one for benefit–cost ratios and positive
+                calculation. Benefit cost ratios compare total benefits with total costs, while net present values show the
+                difference between benefits and costs in rupee terms. Values above one for benefit cost ratios and positive
                 net present values indicate that estimated benefits exceed costs on the assumptions used.
             </p>
 
@@ -1011,9 +1020,7 @@
                     </tr>
                     </thead>
                     <tbody id="sensitivity-table-body">
-                    <!-- Filled dynamically:
-                         - Current configuration
-                         - One row per saved scenario using stored configuration parameters -->
+                    <!-- Filled dynamically -->
                     </tbody>
                 </table>
             </div>
@@ -1022,7 +1029,7 @@
                 The “Model” column shows which preference model underpins the willingness-to-pay values in each row
                 for example “MXL overall” or “LC supportive class”. Endorsement-adjusted effective benefits multiply
                 the benefit measure by the endorsement rate for that scenario and are intended for sensitivity analysis
-                rather than for primary cost–benefit results.
+                rather than for primary cost benefit results.
             </p>
         </div>
     </section>
@@ -1064,7 +1071,7 @@
                         <th>Endorsement</th>
                         <th>WTP per trainee per month</th>
                         <th>Total WTP (all cohorts)</th>
-                        <th>Benefit–cost ratio</th>
+                        <th>Benefit cost ratio</th>
                         <th>Total economic cost (all cohorts)</th>
                         <th>Total indicative epidemiological benefit (all cohorts)</th>
                         <th>Net epidemiological benefit (all cohorts)</th>
@@ -1094,7 +1101,7 @@
                 willingness-to-pay implications in policy discussions.
             </p>
             <p>
-                The tool is designed to support the Government of India, WHO, the World Bank and other partners
+                The tool is designed to support the Government of India and partners
                 as they plan investments in epidemiology training. It helps answer questions such as:
             </p>
             <ul class="plain-list">
@@ -1261,7 +1268,7 @@ STEPS assumption log will appear here after advanced settings and a configuratio
                 </p>
                 <p>
                     Open the full appendix in a separate window for easier reading or printing. The appendix is written
-                    for policy audiences but also contains enough detail for technical reviewers in ministries, WHO or the World Bank.
+                    for policy audiences but also contains enough detail for technical reviewers.
                 </p>
                 <div class="button-row">
                     <a id="open-technical-window" href="technical-appendix.html" target="_blank" class="btn-secondary">
