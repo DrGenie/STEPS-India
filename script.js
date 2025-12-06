@@ -1,6 +1,7 @@
 /* ===================================================
    STEPS FETP India Decision Aid
    Script with interactive DCE sensitivity / benefits tab
+   + Copilot prompt integration
    =================================================== */
 
 /* ===========================
@@ -1083,6 +1084,7 @@ function refreshAll(results, options = {}) {
   updateCostingTab(results);
   updateNationalSimulation(results);
   updateSensitivityTab();
+  updateCopilotPromptPreview(results);
 
   if (!skipToast) {
     showToast("Configuration applied. Results updated.", "success");
@@ -2395,7 +2397,7 @@ function updateNationalCharts(currentResults) {
         labels,
         datasets: [
           {
-            label: "Benefit–cost ratio",
+            label: "Benefit cost ratio",
             data: bcrs,
             backgroundColor: "#1D4F91"
           }
@@ -2680,6 +2682,233 @@ function exportSensitivityToPdf() {
 }
 
 /* ===========================
+   Copilot integration
+   =========================== */
+
+/*
+  Build a compact JSON export of the current scenario
+  for use inside Copilot prompts.
+*/
+function buildCopilotScenarioJson(results) {
+  if (!results || !results.cfg) return null;
+
+  const {
+    cfg,
+    util,
+    costs,
+    epi,
+    totalCostAllCohorts,
+    totalBenefitAllCohorts,
+    netBenefitAllCohorts,
+    bcr,
+    dceCba
+  } = results;
+
+  const scenarioSummary =
+    dceCba && dceCba.scenarioSummary ? dceCba.scenarioSummary : null;
+
+  return {
+    tool: "STEPS FETP India Decision Aid",
+    exportVersion: "1.0",
+    exportedAtIso: new Date().toISOString(),
+    configuration: {
+      tier: cfg.tier,
+      career: cfg.career,
+      mentorship: cfg.mentorship,
+      delivery: cfg.delivery,
+      responseTimeDays: cfg.response,
+      costPerTraineePerMonthInr: cfg.costPerTraineePerMonth,
+      traineesPerCohort: cfg.traineesPerCohort,
+      numberOfCohorts: cfg.numberOfCohorts,
+      scenarioName: cfg.scenarioName || "",
+      scenarioNotes: cfg.scenarioNotes || ""
+    },
+    keyOutputs: {
+      endorsementProbabilityOverall: util.endorseProb,
+      optOutProbabilityOverall: util.optOutProb,
+      wtpPerTraineePerMonthInr: util.wtpConfig,
+      programmeCostPerCohortInr: costs.programmeCostPerCohort,
+      opportunityCostPerCohortInr: costs.opportunityCostPerCohort,
+      totalEconomicCostPerCohortInr: costs.totalEconomicCostPerCohort,
+      totalCostAllCohortsInr: totalCostAllCohorts,
+      totalEpidemiologicalBenefitAllCohortsInr: totalBenefitAllCohorts,
+      netBenefitAllCohortsInr: netBenefitAllCohorts,
+      benefitCostRatioEpi: bcr,
+      epiGraduatesAllCohorts: epi.graduatesAllCohorts,
+      epiOutbreakResponsesPerYearAllCohorts: epi.outbreaksPerYearAllCohorts
+    },
+    dceCostBenefitSummary: scenarioSummary
+  };
+}
+
+/*
+  Build a ready to paste Copilot prompt that:
+  - explains what the STEPS tool does
+  - embeds the scenario JSON
+  - asks Copilot to summarise and interpret.
+*/
+function buildCopilotPrompt(results) {
+  const scenarioJson = buildCopilotScenarioJson(results);
+  const jsonText = scenarioJson
+    ? JSON.stringify(scenarioJson, null, 2)
+    : "{}";
+
+  return `You are helping interpret outputs from the "STEPS FETP India Decision Aid", a decision support tool developed for the India Field Epidemiology Training Program. The tool uses discrete choice experiment results and costing assumptions to predict programme endorsement, estimate willingness to pay (WTP) for different training designs, and combine these with epidemiological value assumptions to compute benefit-cost indicators.
+
+The data below describe one specific training configuration that a policymaker is considering.
+
+Here is the scenario exported from the tool in JSON format:
+
+\`\`\`json
+${jsonText}
+\`\`\`
+
+Please:
+1. Summarise the key indicators in clear language for a Ministry of Health or World Bank audience (endorsement, total economic cost, total benefits, benefit-cost ratio, net benefit, and epidemiological outputs such as graduates and outbreak responses).
+2. Interpret what these numbers imply for the value for money of this configuration, highlighting whether it looks attractive, borderline, or poor compared with a generic threshold of a benefit-cost ratio of 1.
+3. Comment on how endorsement interacts with cost-effectiveness (for example, whether lower endorsement might limit the realised benefits even if the benefit-cost ratio looks strong).
+4. Suggest 2–3 short, concrete messages that could be included in a briefing note or slide deck for senior decision makers.
+5. List any important caveats or uncertainties that should be flagged when presenting these results.
+
+When interpreting monetary figures, remember that values are in Indian Rupees (INR) and usually refer to all cohorts over the planning horizon, not per year, unless otherwise indicated.`;
+}
+
+/*
+  Optional on-screen preview box so the user can see
+  exactly what will be pasted into Copilot.
+  Expects a <pre> or <textarea> with id="copilot-prompt-preview".
+*/
+function updateCopilotPromptPreview(results) {
+  const previewEl = document.getElementById("copilot-prompt-preview");
+  if (!previewEl) return;
+
+  if (!results) {
+    previewEl.textContent =
+      "Apply a configuration, then use the Copilot buttons to generate a detailed interpretation prompt.";
+    return;
+  }
+
+  const promptText = buildCopilotPrompt(results);
+  previewEl.textContent = promptText;
+}
+
+/*
+  Fallback copy helper when navigator.clipboard is not available.
+*/
+function copyTextFallback(text, onSuccess) {
+  try {
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.style.position = "fixed";
+    textarea.style.left = "-9999px";
+    textarea.style.top = "0";
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+    const ok = document.execCommand("copy");
+    document.body.removeChild(textarea);
+
+    if (ok) {
+      if (typeof onSuccess === "function") {
+        onSuccess();
+      }
+    } else {
+      showToast(
+        "Unable to copy the prompt automatically. You can copy it manually from the preview box.",
+        "error"
+      );
+    }
+  } catch (e) {
+    showToast(
+      "Unable to copy the prompt automatically. You can copy it manually from the preview box.",
+      "error"
+    );
+  }
+}
+
+/*
+  Wire Copilot buttons:
+  - #btn-copy-copilot-prompt : copy only
+  - #btn-open-copilot       : copy + open copilot.microsoft.com
+*/
+function setupCopilotIntegration() {
+  const copyBtn = document.getElementById("btn-copy-copilot-prompt");
+  const openBtn = document.getElementById("btn-open-copilot");
+
+  if (copyBtn) {
+    copyBtn.addEventListener("click", () => {
+      if (!state.lastResults) {
+        showToast(
+          "Apply a configuration before copying the Copilot prompt.",
+          "warning"
+        );
+        return;
+      }
+
+      const promptText = buildCopilotPrompt(state.lastResults);
+
+      const afterCopy = () => {
+        updateCopilotPromptPreview(state.lastResults);
+        showToast(
+          "Copilot prompt copied. Open Copilot and paste to start the interpretation.",
+          "success"
+        );
+      };
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard
+          .writeText(promptText)
+          .then(afterCopy)
+          .catch(() => {
+            copyTextFallback(promptText, afterCopy);
+          });
+      } else {
+        copyTextFallback(promptText, afterCopy);
+      }
+    });
+  }
+
+  if (openBtn) {
+    openBtn.addEventListener("click", () => {
+      if (!state.lastResults) {
+        // Still open Copilot, but explain that there is no scenario yet
+        window.open("https://copilot.microsoft.com/", "_blank");
+        showToast(
+          "Copilot opened. Apply a configuration in the tool, then use the Copilot buttons again to export a scenario.",
+          "warning"
+        );
+        return;
+      }
+
+      const promptText = buildCopilotPrompt(state.lastResults);
+
+      const afterCopy = () => {
+        updateCopilotPromptPreview(state.lastResults);
+        window.open("https://copilot.microsoft.com/", "_blank");
+        showToast(
+          "Copilot opened in a new tab. The scenario prompt is on your clipboard. Paste it into Copilot to start the analysis.",
+          "success"
+        );
+      };
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard
+          .writeText(promptText)
+          .then(afterCopy)
+          .catch(() => {
+            copyTextFallback(promptText, afterCopy);
+          });
+      } else {
+        copyTextFallback(promptText, afterCopy);
+      }
+    });
+  }
+
+  // Initialise preview with a generic message
+  updateCopilotPromptPreview(state.lastResults);
+}
+
+/* ===========================
    Advanced settings
    =========================== */
 
@@ -2861,7 +3090,7 @@ function openResultsModal(results) {
     )}, <strong>Total indicative epidemiological benefit:</strong> ${formatCurrency(
     results.totalBenefitAllCohorts,
     state.currency
-  )}, <strong>Benefit–cost ratio:</strong> ${
+  )}, <strong>Benefit cost ratio:</strong> ${
     bcr !== null && isFinite(bcr) ? bcr.toFixed(2) : "-"
   }.</p>
     <p><strong>Graduates:</strong> ${formatNumber(
@@ -3171,6 +3400,7 @@ function init() {
   setupScenarioExports();
   setupSensitivityControls();
   setupTour();
+  setupCopilotIntegration();
 
   const applyBtn = document.getElementById("update-results");
   if (applyBtn) {
