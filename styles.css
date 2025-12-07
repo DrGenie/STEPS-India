@@ -1650,7 +1650,7 @@ textarea:focus-visible {
     margin-top: 8px;
 }
 
-/* Section labels for overall / latent classes */
+/* Section labels for grouped sensitivity sections (no latent classes) */
 .sensitivity-section-label {
     font-size: 13px;
     font-weight: 500;
@@ -1693,6 +1693,105 @@ textarea:focus-visible {
     .sensitivity-controls-grid {
         grid-template-columns: minmax(0, 1fr);
     }
+}
+
+/* ===========================
+   Costing tab
+   =========================== */
+
+.costing-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1.2fr);
+    gap: 16px;
+    align-items: flex-start;
+}
+
+@media (max-width: 1024px) {
+    .costing-layout {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+.costing-left {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.costing-right {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.cost-config-card {
+    background-color: #F9FAFB;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--color-border);
+    padding: 12px 14px;
+}
+
+.cost-config-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.cost-config-header h3 {
+    font-size: 14px;
+    margin: 0;
+}
+
+.cost-config-note {
+    font-size: 12px;
+    color: var(--color-text-muted);
+    margin-top: 4px;
+}
+
+.cost-config-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 10px 16px;
+    margin-top: 8px;
+}
+
+@media (max-width: 640px) {
+    .cost-config-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+.costing-summary-card {
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--color-border);
+    background-color: #FFFFFF;
+    padding: 12px 14px;
+}
+
+.costing-summary-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.costing-summary-metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 8px;
+}
+
+.costing-error {
+    margin-top: 8px;
+    padding: 8px 10px;
+    border-radius: var(--radius-md);
+    background-color: var(--color-danger-soft);
+    border: 1px solid #FECACA;
+    font-size: 12px;
+    color: var(--color-danger);
 }
 
 /* ===========================
