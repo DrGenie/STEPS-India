@@ -1,5 +1,5 @@
 /* ===========================
-   Base layout and typographyyy
+   Base layout and typography
    =========================== */
 
 :root {
@@ -38,11 +38,74 @@
 
     --shadow-soft: 0 1px 3px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.04);
     --shadow-medium: 0 8px 16px rgba(15, 23, 42, 0.10);
+    --shadow-strong: 0 18px 40px rgba(15, 23, 42, 0.22);
 
     --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 
     --transition-fast: 0.15s ease-out;
+    --transition-med: 0.22s ease-out;
 }
+
+/* Optional dark theme support */
+
+body[data-theme="worldbank-dark"] {
+    --color-bg: #020617;
+    --color-card: #020617;
+    --color-text: #E5E7EB;
+    --color-text-muted: #9CA3AF;
+    --color-border: #1F2937;
+    --color-border-strong: #4B5563;
+    --color-table-stripe: #020617;
+    --color-table-hover: #111827;
+    --color-table-header: #0B1120;
+    background-color: var(--color-bg);
+    color: var(--color-text);
+}
+
+body[data-theme="worldbank-dark"] .card,
+body[data-theme="worldbank-dark"] .card-secondary {
+    background-color: #020617;
+    border-color: #1F2937;
+    box-shadow: 0 10px 25px rgba(15, 23, 42, 0.45);
+}
+
+body[data-theme="worldbank-dark"] .tab-bar {
+    background-color: #020617;
+}
+
+body[data-theme="worldbank-dark"] .tab-link.active {
+    background-color: #020617;
+}
+
+body[data-theme="worldbank-dark"] .data-table tbody tr:nth-child(even) {
+    background-color: #020617;
+}
+
+body[data-theme="worldbank-dark"] .note,
+body[data-theme="worldbank-dark"] .cost-summary-card,
+body[data-theme="worldbank-dark"] .natsim-summary,
+body[data-theme="worldbank-dark"] .sensitivity-controls,
+body[data-theme="worldbank-dark"] .copilot-actions,
+body[data-theme="worldbank-dark"] .copilot-help-box {
+    background-color: #020617;
+    border-color: #1F2937;
+}
+
+body[data-theme="worldbank-dark"] .attr-table-card {
+    background-color: #020617;
+    border-color: #1F2937;
+}
+
+body[data-theme="worldbank-dark"] .copilot-prompt-panel {
+    background-color: #020617;
+    border-color: #1F2937;
+}
+
+body[data-theme="worldbank-dark"] .copilot-prompt-body {
+    background-color: #020617;
+}
+
+/* Global reset */
 
 *,
 *::before,
@@ -61,7 +124,7 @@ body {
     font-family: var(--font-sans);
     font-size: 14px;
     line-height: 1.5;
-    background-color: var(--color-bg);
+    background: radial-gradient(circle at top left, #E0ECFF 0, #F3F4F6 40%, #E5E7EB 100%);
     color: var(--color-text);
     -webkit-font-smoothing: antialiased;
 }
@@ -86,12 +149,18 @@ a:hover {
     align-items: center;
     justify-content: space-between;
     padding: 12px 24px;
-    background-color: #FFFFFF;
+    background-color: rgba(255, 255, 255, 0.96);
     border-bottom: 1px solid rgba(148, 163, 184, 0.4);
     box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
     position: sticky;
     top: 0;
     z-index: 20;
+    backdrop-filter: blur(12px);
+}
+
+body[data-theme="worldbank-dark"] .app-header {
+    background-color: rgba(15, 23, 42, 0.96);
+    border-bottom-color: rgba(30, 64, 175, 0.6);
 }
 
 .app-header-left {
@@ -101,17 +170,18 @@ a:hover {
 }
 
 .app-logo-circle {
-    width: 36px;
-    height: 36px;
+    width: 40px;
+    height: 40px;
     border-radius: 999px;
-    background-color: var(--color-primary-soft);
-    color: var(--color-primary);
+    background: radial-gradient(circle at 30% 20%, #FFFFFF 0, #E0ECFF 40%, #1D4F91 100%);
+    color: #FFFFFF;
     display: flex;
     align-items: center;
     justify-content: center;
     font-weight: 700;
     font-size: 18px;
     box-shadow: var(--shadow-soft);
+    border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .app-title-block {
@@ -124,6 +194,7 @@ a:hover {
     font-size: 20px;
     font-weight: 600;
     color: var(--color-text);
+    letter-spacing: 0.01em;
 }
 
 .app-subtitle {
@@ -211,20 +282,26 @@ button {
     white-space: nowrap;
     background: none;
     color: inherit;
-    transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast), opacity var(--transition-fast);
+    transition:
+        background-color var(--transition-fast),
+        border-color var(--transition-fast),
+        color var(--transition-fast),
+        box-shadow var(--transition-fast),
+        transform var(--transition-fast),
+        opacity var(--transition-fast);
 }
 
 .btn-primary {
-    background-color: var(--color-primary);
+    background: linear-gradient(135deg, #1D4F91, #2563EB);
     color: #FFFFFF;
-    border-color: var(--color-primary);
+    border-color: #1D4F91;
     box-shadow: var(--shadow-soft);
 }
 
 .btn-primary:hover {
-    background-color: var(--color-primary-hover);
+    background: linear-gradient(135deg, #265FA6, #1D4F91);
     border-color: var(--color-primary-hover);
-    box-shadow: var(--shadow-soft);
+    box-shadow: var(--shadow-medium);
     transform: translateY(-1px);
 }
 
@@ -259,13 +336,13 @@ button {
 }
 
 .btn-primary-small {
-    background-color: var(--color-primary);
+    background: linear-gradient(135deg, #1D4F91, #2563EB);
     color: #FFFFFF;
-    border-color: var(--color-primary);
+    border-color: #1D4F91;
 }
 
 .btn-primary-small:hover {
-    background-color: var(--color-primary-hover);
+    background: linear-gradient(135deg, #265FA6, #1D4F91);
 }
 
 .btn-ghost-small {
@@ -302,13 +379,18 @@ button {
     justify-content: center;
     background-color: #FFFFFF;
     cursor: pointer;
-    transition: background-color var(--transition-fast), border-color var(--transition-fast), transform var(--transition-fast);
+    transition:
+        background-color var(--transition-fast),
+        border-color var(--transition-fast),
+        transform var(--transition-fast),
+        box-shadow var(--transition-fast);
 }
 
 .btn-icon:hover {
     background-color: #F3F4F6;
     border-color: var(--color-border-strong);
     transform: translateY(-1px);
+    box-shadow: var(--shadow-soft);
 }
 
 button:disabled,
@@ -330,7 +412,7 @@ button:disabled,
 .app-shell {
     max-width: 1240px;
     margin: 16px auto 32px auto;
-    padding: 0 16px;
+    padding: 0 16px 24px 16px;
 }
 
 .app-main-layout {
@@ -360,7 +442,7 @@ button:disabled,
     margin-bottom: 12px;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
-    background-color: #F9FAFB;
+    background: linear-gradient(90deg, #EFF6FF, #F9FAFB);
     padding: 4px 4px 0 4px;
     border-radius: 999px 999px 0 0;
 }
@@ -378,6 +460,12 @@ button:disabled,
     white-space: nowrap;
     flex: 0 0 auto;
     margin-bottom: -1px;
+    transition:
+        color var(--transition-fast),
+        background-color var(--transition-fast),
+        box-shadow var(--transition-fast),
+        border-color var(--transition-fast),
+        transform var(--transition-fast);
 }
 
 .tab-link.active {
@@ -411,6 +499,17 @@ button:disabled,
     padding: 18px 20px;
     box-shadow: var(--shadow-soft);
     border: 1px solid rgba(15, 23, 42, 0.04);
+    transition:
+        box-shadow var(--transition-med),
+        transform var(--transition-med),
+        border-color var(--transition-med),
+        background-color var(--transition-med);
+}
+
+.card:hover {
+    box-shadow: var(--shadow-medium);
+    transform: translateY(-2px);
+    border-color: rgba(15, 23, 42, 0.08);
 }
 
 .card-secondary {
@@ -480,6 +579,59 @@ button:disabled,
 
 .attributes-layout-secondary {
     margin-top: 16px;
+}
+
+/* Video card and responsive embed */
+
+.video-card {
+    margin-top: 10px;
+    border-radius: var(--radius-lg);
+    background-color: #0B1120;
+    border: 1px solid #1E293B;
+    padding: 10px 12px 14px 12px;
+    box-shadow: var(--shadow-soft);
+}
+
+.video-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 6px;
+    color: #E5E7EB;
+    font-size: 13px;
+}
+
+.video-card-title {
+    font-weight: 600;
+}
+
+.video-wrapper {
+    position: relative;
+    width: 100%;
+    padding-bottom: 56.25%;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    background-color: #020617;
+    margin-top: 6px;
+}
+
+.video-wrapper iframe,
+.video-wrapper video {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+}
+
+/* Fallback if iframe is placed directly in card */
+
+.card iframe {
+    max-width: 100%;
+    width: 100%;
+    border-radius: var(--radius-md);
+    border: 0;
 }
 
 /* Responsive breakpoints */
@@ -618,7 +770,11 @@ select {
     padding: 6px 8px;
     background-color: #FFFFFF;
     color: var(--color-text);
-    transition: border-color var(--transition-fast), box-shadow var(--transition-fast), background-color var(--transition-fast);
+    transition:
+        border-color var(--transition-fast),
+        box-shadow var(--transition-fast),
+        background-color var(--transition-fast),
+        transform var(--transition-fast);
 }
 
 input[type="number"]:focus,
@@ -629,6 +785,7 @@ select:focus {
     border-color: var(--color-primary);
     box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.25);
     background-color: #FFFFFF;
+    transform: translateY(-0.5px);
 }
 
 input[readonly],
@@ -713,6 +870,10 @@ input[type="range"]::-moz-range-thumb {
     background-color: transparent;
     color: var(--color-text-muted);
     white-space: nowrap;
+    transition:
+        background-color var(--transition-fast),
+        color var(--transition-fast),
+        box-shadow var(--transition-fast);
 }
 
 .pill-toggle.active {
@@ -733,6 +894,9 @@ input[type="range"]::-moz-range-thumb {
     border: 1px solid var(--color-border);
     background-color: #F9FAFB;
     min-width: 140px;
+    transition:
+        border-color var(--transition-fast),
+        background-color var(--transition-fast);
 }
 
 .switch-pill.on {
@@ -789,25 +953,43 @@ input[type="range"]::-moz-range-thumb {
     cursor: pointer;
     flex-shrink: 0;
     position: relative;
+    transition:
+        background-color var(--transition-fast),
+        border-color var(--transition-fast),
+        transform var(--transition-fast),
+        box-shadow var(--transition-fast);
 }
 
 .info-icon:hover {
     background-color: #F3F4F6;
     border-color: var(--color-border-strong);
+    transform: translateY(-0.5px);
+    box-shadow: var(--shadow-soft);
 }
 
 /* Tooltip bubble (injected by JS) */
 
 .tooltip-bubble {
     position: fixed;
-    max-width: 280px;
+    max-width: 320px;
     background-color: #111827;
     color: #F9FAFB;
     font-size: 12px;
     padding: 8px 10px;
-    border-radius: 6px;
-    z-index: 40;
-    box-shadow: var(--shadow-soft);
+    border-radius: 8px;
+    z-index: 80;
+    box-shadow: var(--shadow-medium);
+    opacity: 0;
+    transform: translateY(4px);
+    pointer-events: none;
+    transition:
+        opacity var(--transition-fast),
+        transform var(--transition-fast);
+}
+
+.tooltip-bubble.tooltip-visible {
+    opacity: 1;
+    transform: translateY(0);
 }
 
 .tooltip-bubble p {
@@ -821,6 +1003,16 @@ input[type="range"]::-moz-range-thumb {
     background-color: #111827;
     transform: rotate(45deg);
     z-index: -1;
+}
+
+/* Optional directional helpers if JS adds them */
+
+.tooltip-bubble.top .tooltip-arrow {
+    bottom: -4px;
+}
+
+.tooltip-bubble.bottom .tooltip-arrow {
+    top: -4px;
 }
 
 /* ===========================
@@ -1199,7 +1391,10 @@ canvas {
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 50;
+    z-index: 90;
+    opacity: 1;
+    transition:
+        opacity var(--transition-med);
 }
 
 .modal.hidden {
@@ -1213,7 +1408,7 @@ canvas {
     width: min(640px, 92vw);
     max-height: 90vh;
     overflow: auto;
-    box-shadow: var(--shadow-medium);
+    box-shadow: var(--shadow-strong);
     position: relative;
 }
 
@@ -1254,11 +1449,13 @@ canvas {
     padding: 8px 12px;
     font-size: 13px;
     box-shadow: var(--shadow-medium);
-    z-index: 60;
+    z-index: 95;
     opacity: 0;
     transform: translateY(10px);
     pointer-events: none;
-    transition: opacity var(--transition-fast), transform var(--transition-fast);
+    transition:
+        opacity var(--transition-fast),
+        transform var(--transition-fast);
 }
 
 .toast.show,
@@ -1288,7 +1485,7 @@ canvas {
     position: fixed;
     inset: 0;
     background-color: rgba(15, 23, 42, 0.30);
-    z-index: 70;
+    z-index: 98;
 }
 
 .tour-overlay.hidden {
@@ -1302,7 +1499,7 @@ canvas {
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-medium);
     padding: 10px 12px;
-    z-index: 80;
+    z-index: 99;
     border: 1px solid var(--color-border);
     border-top: 3px solid var(--color-primary);
 }
@@ -1846,6 +2043,7 @@ textarea:focus-visible {
     padding: 10px 12px 12px 12px;
     position: relative;
     box-shadow: var(--shadow-soft);
+    border: 1px solid #1F2937;
     font-family: "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     font-size: 12px;
 }
@@ -1893,13 +2091,18 @@ textarea:focus-visible {
     align-items: center;
     gap: 4px;
     cursor: pointer;
-    transition: background-color var(--transition-fast), border-color var(--transition-fast), transform var(--transition-fast);
+    transition:
+        background-color var(--transition-fast),
+        border-color var(--transition-fast),
+        transform var(--transition-fast),
+        box-shadow var(--transition-fast);
 }
 
 .copilot-copy-btn:hover {
     background-color: #1F2937;
     border-color: #6B7280;
     transform: translateY(-1px);
+    box-shadow: var(--shadow-soft);
 }
 
 .copilot-copy-icon {
