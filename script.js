@@ -1,7 +1,7 @@
 /* ===================================================
    STEPS FETP India Decision Aid
    Script with interactive DCE sensitivity / benefits tab
-   + Copilot prompt integration
+   + soft Copilot integration
    =================================================== */
 
 /* ===========================
@@ -37,69 +37,6 @@ const MXL_COEFS = {
     7: 0.610
   },
   costPerThousand: -0.005
-};
-
-const LC2_COEFS = {
-  ascProgram: 0.098,
-  ascOptOut: -2.543,
-  tier: {
-    frontline: 0.0,
-    intermediate: 0.087,
-    advanced: 0.422
-  },
-  career: {
-    certificate: 0.0,
-    uniqual: -0.024,
-    career_path: -0.123
-  },
-  mentorship: {
-    low: 0.0,
-    medium: 0.342,
-    high: 0.486
-  },
-  delivery: {
-    blended: 0.0,
-    inperson: -0.017,
-    online: -0.700
-  },
-  response: {
-    30: 0.0,
-    15: 0.317,
-    7: 0.504
-  },
-  costPerThousand: -0.001
-};
-
-/* Conservative / resister class (for endorsement only; cost coefficient not used for WTP) */
-const LC1_COEFS = {
-  ascProgram: 0.181,
-  ascOptOut: 1.222,
-  tier: {
-    frontline: 0.0,
-    intermediate: 0.070,
-    advanced: 0.045
-  },
-  career: {
-    certificate: 0.0,
-    uniqual: 0.098,
-    career_path: -0.027
-  },
-  mentorship: {
-    low: 0.0,
-    medium: 0.327,
-    high: 0.636
-  },
-  delivery: {
-    blended: 0.0,
-    inperson: -0.476,
-    online: -0.798
-  },
-  response: {
-    30: 0.0,
-    15: 0.640,
-    7: 0.513
-  },
-  costPerThousand: 0.0001
 };
 
 /* ===========================
@@ -357,6 +294,9 @@ const state = {
     seen: false,
     active: false,
     stepIndex: 0
+  },
+  copilot: {
+    lastPrompt: ""
   }
 };
 
@@ -405,9 +345,8 @@ function logistic(x) {
   return 1 / (1 + Math.exp(-x));
 }
 
-function getModelCoefs(modelId) {
-  if (modelId === "lc2") return LC2_COEFS;
-  if (modelId === "lc1") return LC1_COEFS;
+function getModelCoefs(/* modelId */) {
+  // Latent class models removed – always use mixed logit coefficients
   return MXL_COEFS;
 }
 
@@ -502,9 +441,7 @@ function computeWtpComponents(cfg, coefs) {
 }
 
 /*
-  Compute endorsement probabilities and (optionally) WTP.
-  options.forceNoWtp can be used (e.g. for conservative class)
-  to suppress WTP even if a cost coefficient is available.
+  Compute endorsement probabilities and WTP for mixed logit.
 */
 function computeEndorsementAndWtp(cfg, modelId, options = {}) {
   const coefs = getModelCoefs(modelId);
@@ -802,8 +739,6 @@ function isSensitivityEpiIncluded() {
 /*
   Compute DCE-based WTP benefits and CBA profiles for:
   - Overall (mixed logit)
-  - Supportive latent class (LC2)
-  - Conservative / resister class (LC1; endorsement only)
 */
 function computeDceCbaProfiles(cfg, costs, epi, options) {
   const opts = options || {};
@@ -824,21 +759,12 @@ function computeDceCbaProfiles(cfg, costs, epi, options) {
     (epi.benefitOutbreaksAllCohorts || 0) * epiScale;
 
   const overallUtil = computeEndorsementAndWtp(cfg, "mxl");
-  const supportiveUtil = computeEndorsementAndWtp(cfg, "lc2");
-  const conservativeUtil = computeEndorsementAndWtp(cfg, "lc1", {
-    forceNoWtp: true
-  });
 
-  function buildProfile(label, utilObj, suppressWtp) {
-    const wtpPerTraineePerMonth = suppressWtp
-      ? null
-      : utilObj.wtpConfig;
-
-    const components = suppressWtp
-      ? null
-      : utilObj.wtpComponents || {};
+  function buildProfile(label, utilObj) {
+    const wtpPerTraineePerMonth = utilObj.wtpConfig;
+    const components = utilObj.wtpComponents || {};
     const wtpRespPerTraineePerMonth =
-      !suppressWtp && components && typeof components.response === "number"
+      typeof components.response === "number"
         ? components.response
         : null;
 
@@ -946,27 +872,14 @@ function computeDceCbaProfiles(cfg, costs, epi, options) {
       bcrCombined,
       combinedEffectiveBenefit,
       npvCombinedEffective,
-      bcrEffectiveTotal: bcrCombinedEffective
+      bcrCombinedEffective
     };
   }
 
-  const profiles = {
-    overall: buildProfile(
-      "Overall (mixed logit)",
-      overallUtil,
-      false
-    ),
-    supportive: buildProfile(
-      "Supportive class (latent class)",
-      supportiveUtil,
-      false
-    ),
-    conservative: buildProfile(
-      "Conservative / resister class (latent class)",
-      conservativeUtil,
-      true
-    )
-  };
+  const profileOverall = buildProfile(
+    "Overall (mixed logit)",
+    overallUtil
+  );
 
   const scenarioLabel =
     cfg.scenarioName && cfg.scenarioName.trim().length
@@ -979,53 +892,25 @@ function computeDceCbaProfiles(cfg, costs, epi, options) {
     totalCostAllCohorts,
     epiOutbreakBenefitAllCohorts,
     overall: {
-      B_WTP: profiles.overall.wtpAllCohorts,
-      B_WTP_response: profiles.overall.wtpRespAllCohorts,
-      endorsementRate: profiles.overall.endorsementRate,
-      effectiveWTP: profiles.overall.effectiveBenefitAllCohorts,
-      npvDce: profiles.overall.npvDce,
-      bcrDce: profiles.overall.bcrDce,
-      npvTotal: profiles.overall.npvCombined,
-      bcrTotal: profiles.overall.bcrCombined,
-      npvEffective: profiles.overall.npvEffective,
-      bcrEffective: profiles.overall.bcrEffective,
-      npvEffectiveTotal: profiles.overall.npvCombinedEffective,
-      bcrEffectiveTotal: profiles.overall.bcrEffectiveTotal
-    },
-    supporters: {
-      B_WTP: profiles.supportive.wtpAllCohorts,
-      B_WTP_response: profiles.supportive.wtpRespAllCohorts,
-      endorsementRate: profiles.supportive.endorsementRate,
-      effectiveWTP: profiles.supportive.effectiveBenefitAllCohorts,
-      npvDce: profiles.supportive.npvDce,
-      bcrDce: profiles.supportive.bcrDce,
-      npvTotal: profiles.supportive.npvCombined,
-      bcrTotal: profiles.supportive.bcrCombined,
-      npvEffective: profiles.supportive.npvEffective,
-      bcrEffective: profiles.supportive.bcrEffective,
-      npvEffectiveTotal: profiles.supportive.npvCombinedEffective,
-      bcrEffectiveTotal: profiles.supportive.bcrEffectiveTotal
-    },
-    conservative: {
-      B_WTP: profiles.conservative.wtpAllCohorts,
-      B_WTP_response: profiles.conservative.wtpRespAllCohorts,
-      endorsementRate: profiles.conservative.endorsementRate,
-      effectiveWTP: profiles.conservative.effectiveBenefitAllCohorts,
-      npvDce: profiles.conservative.npvDce,
-      bcrDce: profiles.conservative.bcrDce,
-      npvTotal: profiles.conservative.npvCombined,
-      bcrTotal: profiles.conservative.bcrCombined,
-      npvEffective: profiles.conservative.npvEffective,
-      bcrEffective: profiles.conservative.bcrEffective,
-      npvEffectiveTotal:
-        profiles.conservative.npvCombinedEffective,
-      bcrEffectiveTotal:
-        profiles.conservative.bcrEffectiveTotal
+      B_WTP: profileOverall.wtpAllCohorts,
+      B_WTP_response: profileOverall.wtpRespAllCohorts,
+      endorsementRate: profileOverall.endorsementRate,
+      effectiveWTP: profileOverall.effectiveBenefitAllCohorts,
+      npvDce: profileOverall.npvDce,
+      bcrDce: profileOverall.bcrDce,
+      npvTotal: profileOverall.npvCombined,
+      bcrTotal: profileOverall.bcrCombined,
+      npvEffective: profileOverall.npvEffective,
+      bcrEffective: profileOverall.bcrEffective,
+      npvEffectiveTotal: profileOverall.npvCombinedEffective,
+      bcrEffectiveTotal: profileOverall.bcrCombinedEffective
     }
   };
 
   return {
-    profiles,
+    profiles: {
+      overall: profileOverall
+    },
     totalCostAllCohorts,
     epiOutbreakBenefitAllCohorts,
     scenarioSummary
@@ -1084,7 +969,7 @@ function refreshAll(results, options = {}) {
   updateCostingTab(results);
   updateNationalSimulation(results);
   updateSensitivityTab();
-  updateCopilotPromptPreview(results);
+  updateCopilotTab();
 
   if (!skipToast) {
     showToast("Configuration applied. Results updated.", "success");
@@ -1365,12 +1250,7 @@ function updateConfigSummary(results) {
     7: "Detect and respond within 7 days"
   };
 
-  const modelLabel =
-    state.model === "lc2"
-      ? "Supportive group (latent class)"
-      : state.model === "lc1"
-      ? "Conservative group (latent class)"
-      : "Average mixed logit";
+  const modelLabel = "Average mixed logit";
 
   const tierLabel = tierLabelMap[cfg.tier] || cfg.tier;
   const careerLabel = careerLabelMap[cfg.career] || cfg.career;
@@ -1723,7 +1603,7 @@ function updateCostingTab(results) {
       <td>-</td>
       <td>Included when the opportunity cost toggle is on.</td>
     </tr>
-  `;
+  ";
 
   list.innerHTML = componentsRows + oppRow;
 }
@@ -1825,14 +1705,6 @@ function getSelectedBenefitDefinition() {
   return select.value || "wtp_only";
 }
 
-function getSelectedClassKey() {
-  const select = document.getElementById("benefit-class-scenario");
-  const val = select ? select.value : "overall";
-  if (val === "supportive") return "supporters";
-  if (val === "conservative") return "conservative";
-  return "overall";
-}
-
 function getAllScenarioConfigs() {
   const configs = [];
   if (state.lastResults) {
@@ -1902,14 +1774,12 @@ function renderHeadlineDceBenefitsTable() {
   const scenarioEntries = buildScenarioDceCbaForSensitivity();
   if (!scenarioEntries.length) return;
 
-  const classKey = getSelectedClassKey();
   const benefitDef = getSelectedBenefitDefinition();
 
   scenarioEntries.forEach(entry => {
     const s = entry.summary;
-    const group = s[classKey];
+    const group = s.overall;
 
-    // Total WTP and response WTP (all cohorts)
     const totalWtp = group.B_WTP;
     const wtpResp = group.B_WTP_response;
 
@@ -1922,11 +1792,9 @@ function renderHeadlineDceBenefitsTable() {
 
     const effectiveWtp = group.effectiveWTP;
 
-    // Pure DCE WTP BCR / NPV
     const bcrDce = group.bcrDce;
     const npvDce = group.npvDce;
 
-    // DCE + epi
     const bcrTotal = entry.epiIncluded
       ? group.bcrTotal
       : group.bcrDce;
@@ -1934,9 +1802,23 @@ function renderHeadlineDceBenefitsTable() {
       ? group.npvTotal
       : group.npvDce;
 
+    const totalCostMillions =
+      s.totalCostAllCohorts && isFinite(s.totalCostAllCohorts)
+        ? s.totalCostAllCohorts / 1e6
+        : null;
+    const netBenefitMillions =
+      npvTotal !== null && isFinite(npvTotal)
+        ? npvTotal / 1e6
+        : null;
+
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${entry.label}</td>
+      <td>${
+        totalCostMillions !== null && isFinite(totalCostMillions)
+          ? formatNumber(totalCostMillions, 2)
+          : "-"
+      }</td>
       <td>${formatCurrency(
         s.totalCostAllCohorts,
         state.currency
@@ -1979,6 +1861,11 @@ function renderHeadlineDceBenefitsTable() {
         npvTotal,
         state.currency
       )}</td>
+      <td>${
+        netBenefitMillions !== null && isFinite(netBenefitMillions)
+          ? formatNumber(netBenefitMillions, 2)
+          : "-"
+      }</td>
     `;
     tbody.appendChild(tr);
   });
@@ -2005,7 +1892,6 @@ function renderDetailedSensitivityTable() {
         : 0;
 
     const overall = s.overall;
-    const supporters = s.supporters;
 
     const totalWtpPerCohort =
       entry.cfg.numberOfCohorts > 0 && overall.B_WTP !== null
@@ -2030,18 +1916,6 @@ function renderDetailedSensitivityTable() {
         ? overall.bcrTotal
         : null;
     const npvDceEpi = overall.npvTotal;
-
-    const supportiveWtpPerCohort =
-      entry.cfg.numberOfCohorts > 0 &&
-      supporters.B_WTP !== null
-        ? supporters.B_WTP / entry.cfg.numberOfCohorts
-        : null;
-
-    const supportiveBcrWtpOnly =
-      supporters.bcrDce !== null &&
-      isFinite(supporters.bcrDce)
-        ? supporters.bcrDce
-        : null;
 
     const effectiveWtpPerCohort =
       entry.cfg.numberOfCohorts > 0 &&
@@ -2104,16 +1978,6 @@ function renderDetailedSensitivityTable() {
           : null,
         state.currency
       )}</td>
-      <td>${formatCurrency(
-        supportiveWtpPerCohort,
-        state.currency
-      )}</td>
-      <td>${
-        supportiveBcrWtpOnly !== null &&
-        isFinite(supportiveBcrWtpOnly)
-          ? supportiveBcrWtpOnly.toFixed(2)
-          : "-"
-      }</td>
       <td>${formatCurrency(
         effectiveWtpPerCohort,
         state.currency
@@ -2397,7 +2261,7 @@ function updateNationalCharts(currentResults) {
         labels,
         datasets: [
           {
-            label: "Benefit cost ratio",
+            label: "Benefit–cost ratio",
             data: bcrs,
             backgroundColor: "#1D4F91"
           }
@@ -2518,12 +2382,7 @@ function saveCurrentScenario() {
       ? cfg.scenarioName.trim()
       : `Scenario ${state.scenarios.length + 1}`;
 
-  const modelLabel =
-    state.model === "lc2"
-      ? "Supportive group (latent class)"
-      : state.model === "lc1"
-      ? "Conservative group (latent class)"
-      : "Average mixed logit";
+  const modelLabel = "Average mixed logit";
 
   const notesInput = document.getElementById("scenario-notes");
 
@@ -2541,6 +2400,7 @@ function saveCurrentScenario() {
   updateScenarioTable();
   updateNationalSimulation(state.lastResults);
   updateSensitivityTab();
+  updateCopilotTab();
   showToast("Scenario saved for comparison.", "success");
 }
 
@@ -2591,7 +2451,7 @@ function exportScenariosToPdf() {
   let y = 40;
 
   doc.setFontSize(14);
-  doc.text("STEPS - Saved scenarios", 40, y);
+  doc.text("STEPS – Saved scenarios", 40, y);
   y += 20;
   doc.setFontSize(9);
 
@@ -2609,7 +2469,7 @@ function exportScenariosToPdf() {
     const epi = cells[18] ? cells[18].textContent.trim() : "";
 
     doc.text(
-      `${idx + 1}. ${name} - Tier: ${tier}; Cost: ${cost}; BCR: ${bcr}; Total WTP: ${wtp}; Net epi benefit: ${epi}`,
+      `${idx + 1}. ${name} – Tier: ${tier}; Cost: ${cost}; BCR: ${bcr}; Total WTP: ${wtp}; Net epi benefit: ${epi}`,
       40,
       y
     );
@@ -2660,7 +2520,7 @@ function exportSensitivityToPdf() {
   let y = 40;
 
   doc.setFontSize(14);
-  doc.text("STEPS - DCE benefit sensitivity", 40, y);
+  doc.text("STEPS – DCE benefit sensitivity", 40, y);
   y += 20;
   doc.setFontSize(9);
 
@@ -2679,230 +2539,6 @@ function exportSensitivityToPdf() {
   });
 
   doc.save("STEPS_DCE_sensitivity.pdf");
-}
-
-/* ===========================
-   Copilot integration
-   =========================== */
-
-/*
-  Build a compact JSON export of the current scenario
-  for use inside Copilot prompts.
-*/
-function buildCopilotScenarioJson(results) {
-  if (!results || !results.cfg) return null;
-
-  const {
-    cfg,
-    util,
-    costs,
-    epi,
-    totalCostAllCohorts,
-    totalBenefitAllCohorts,
-    netBenefitAllCohorts,
-    bcr,
-    dceCba
-  } = results;
-
-  const scenarioSummary =
-    dceCba && dceCba.scenarioSummary ? dceCba.scenarioSummary : null;
-
-  return {
-    tool: "STEPS FETP India Decision Aid",
-    exportVersion: "1.0",
-    exportedAtIso: new Date().toISOString(),
-    configuration: {
-      tier: cfg.tier,
-      career: cfg.career,
-      mentorship: cfg.mentorship,
-      delivery: cfg.delivery,
-      responseTimeDays: cfg.response,
-      costPerTraineePerMonthInr: cfg.costPerTraineePerMonth,
-      traineesPerCohort: cfg.traineesPerCohort,
-      numberOfCohorts: cfg.numberOfCohorts,
-      scenarioName: cfg.scenarioName || "",
-      scenarioNotes: cfg.scenarioNotes || ""
-    },
-    keyOutputs: {
-      endorsementProbabilityOverall: util.endorseProb,
-      optOutProbabilityOverall: util.optOutProb,
-      wtpPerTraineePerMonthInr: util.wtpConfig,
-      programmeCostPerCohortInr: costs.programmeCostPerCohort,
-      opportunityCostPerCohortInr: costs.opportunityCostPerCohort,
-      totalEconomicCostPerCohortInr: costs.totalEconomicCostPerCohort,
-      totalCostAllCohortsInr: totalCostAllCohorts,
-      totalEpidemiologicalBenefitAllCohortsInr: totalBenefitAllCohorts,
-      netBenefitAllCohortsInr: netBenefitAllCohorts,
-      benefitCostRatioEpi: bcr,
-      epiGraduatesAllCohorts: epi.graduatesAllCohorts,
-      epiOutbreakResponsesPerYearAllCohorts: epi.outbreaksPerYearAllCohorts
-    },
-    dceCostBenefitSummary: scenarioSummary
-  };
-}
-
-/*
-  Build a ready to paste Copilot prompt using the detailed
-  policy-briefing instructions.
-*/
-function buildCopilotPrompt(results) {
-  const scenarioJson = buildCopilotScenarioJson(results);
-  const jsonText = scenarioJson
-    ? JSON.stringify(scenarioJson, null, 2)
-    : "{}";
-
-  return `Act as a senior health economist advising the Ministry of Health and Family Welfare in India on the national scale up of Field Epidemiology Training Programs (FETP). You are working with outputs from the "STEPS FETP India Decision Aid", which summarises scenarios that differ by programme tier (frontline, intermediate, advanced), career incentives, mentorship intensity, delivery mode, response time, cost per trainee per month, number of cohorts and model based outputs. The JSON you will receive contains, for each scenario, discrete choice experiment (DCE) based endorsement probabilities, willingness to pay (WTP) in Indian rupees, epidemiological benefits (graduates, outbreak responses and their monetary valuation), total economic costs (including opportunity cost), benefit cost ratios (BCR) and net benefits at national scale.
-
-Use the JSON provided below to reconstruct in clear language what the scenario represents. Describe the configuration in plain terms, including which FETP tier is being scaled, the size of the intake, the main design features (career pathway, mentorship, delivery mode and response time) and the implied cost per trainee and total economic cost across all cohorts. Explain the DCE endorsement results in intuitive language for Indian policy makers by stating what proportion of key stakeholders are predicted to support the configuration, and how this compares to what would be considered low, moderate or strong endorsement for a national scale up decision.
-
-Interpret the DCE based WTP estimates as a monetary summary of how much stakeholders value the programme relative to the status quo. Compare total WTP for all cohorts with the total economic cost, and explain whether stakeholders appear willing to "pay" more, about the same or less than the programme is expected to cost. Discuss what this implies for political feasibility, acceptability to partners and the strength of the economic case from a preference based perspective. If WTP related to faster response time is reported separately, highlight how much additional value decision makers gain from moving from slower to faster response in terms of early detection and control of outbreaks.
-
-Summarise the epidemiological outputs by describing the expected number of graduates, the number of outbreak responses supported per year and the approximate monetary value of these benefits over the planning horizon. Explain what these figures mean for India’s surveillance and response capacity, including how the selected FETP tier contributes to front line detection, intermediate analysis or advanced leadership and mentoring in the system. Make clear whether the epidemiological benefit estimates, when combined with costs, produce a BCR that is clearly above one, close to one or below one, and what that means for value for money.
-
-Bring the results together into a concise policy interpretation aimed at senior decision makers in India. State explicitly whether the configuration appears highly attractive, promising but needing refinement, or weak from a value for money perspective, taking into account endorsement levels, DCE based WTP, epidemiological benefits, total economic costs, BCR and net benefits. Where relevant, point out trade offs between tiers, for example whether frontline expansion gives broader coverage at lower cost or whether intermediate or advanced investments generate higher value per cohort but require more resources and stronger implementation capacity. Comment on affordability and fiscal space by relating the size of the total economic cost to the likely budget envelope for FETP scale up within the health system.
-
-Finally, provide concrete recommendations for policy makers. Indicate whether the scenario should be considered for national scale up, targeted scale up in selected states, further piloting or redesign. Suggest practical levers to improve the configuration for India, such as adjusting career incentives, strengthening mentorship, revising delivery mode or revisiting cost per trainee so that endorsement, WTP and BCR are improved. Present your answer as a short policy briefing with clear section headings and well structured paragraphs, without bullet points, and write in an accessible but analytically rigorous style suitable for cabinet notes, World Bank discussions and high level steering committee meetings.
-
-Here is the JSON export you should base your analysis on:
-
-\`\`\`json
-${jsonText}
-\`\`\`
-`;
-}
-
-/*
-  Optional on-screen preview box so the user can see
-  exactly what will be pasted into Copilot.
-  Expects a <pre> or <textarea> with id="copilot-prompt-preview".
-*/
-function updateCopilotPromptPreview(results) {
-  const previewEl = document.getElementById("copilot-prompt-preview");
-  if (!previewEl) return;
-
-  if (!results) {
-    previewEl.textContent =
-      "Apply a configuration, then use the Copilot buttons to generate a detailed interpretation prompt.";
-    return;
-  }
-
-  const promptText = buildCopilotPrompt(results);
-  previewEl.textContent = promptText;
-}
-
-/*
-  Fallback copy helper when navigator.clipboard is not available.
-*/
-function copyTextFallback(text, onSuccess) {
-  try {
-    const textarea = document.createElement("textarea");
-    textarea.value = text;
-    textarea.style.position = "fixed";
-    textarea.style.left = "-9999px";
-    textarea.style.top = "0";
-    document.body.appendChild(textarea);
-    textarea.focus();
-    textarea.select();
-    const ok = document.execCommand("copy");
-    document.body.removeChild(textarea);
-
-    if (ok) {
-      if (typeof onSuccess === "function") {
-        onSuccess();
-      }
-    } else {
-      showToast(
-        "Unable to copy the prompt automatically. You can copy it manually from the preview box.",
-        "error"
-      );
-    }
-  } catch (e) {
-    showToast(
-      "Unable to copy the prompt automatically. You can copy it manually from the preview box.",
-      "error"
-    );
-  }
-}
-
-/*
-  Wire Copilot buttons:
-  - #btn-copy-copilot-prompt : copy only
-  - #btn-open-copilot       : copy + open copilot.microsoft.com
-*/
-function setupCopilotIntegration() {
-  const copyBtn = document.getElementById("btn-copy-copilot-prompt");
-  const openBtn = document.getElementById("btn-open-copilot");
-
-  if (copyBtn) {
-    copyBtn.addEventListener("click", () => {
-      if (!state.lastResults) {
-        showToast(
-          "Apply a configuration before copying the Copilot prompt.",
-          "warning"
-        );
-        return;
-      }
-
-      const promptText = buildCopilotPrompt(state.lastResults);
-
-      const afterCopy = () => {
-        updateCopilotPromptPreview(state.lastResults);
-        showToast(
-          "Copilot prompt copied. Open Copilot and paste to start the interpretation.",
-          "success"
-        );
-      };
-
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard
-          .writeText(promptText)
-          .then(afterCopy)
-          .catch(() => {
-            copyTextFallback(promptText, afterCopy);
-          });
-      } else {
-        copyTextFallback(promptText, afterCopy);
-      }
-    });
-  }
-
-  if (openBtn) {
-    openBtn.addEventListener("click", () => {
-      if (!state.lastResults) {
-        window.open("https://copilot.microsoft.com/", "_blank");
-        showToast(
-          "Copilot opened. Apply a configuration in the tool, then use the Copilot buttons again to export a scenario.",
-          "warning"
-        );
-        return;
-      }
-
-      const promptText = buildCopilotPrompt(state.lastResults);
-
-      const afterCopy = () => {
-        updateCopilotPromptPreview(state.lastResults);
-        window.open("https://copilot.microsoft.com/", "_blank");
-        showToast(
-          "Copilot opened in a new tab. The scenario prompt is on your clipboard. Paste it into Copilot to start the analysis.",
-          "success"
-        );
-      };
-
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard
-          .writeText(promptText)
-          .then(afterCopy)
-          .catch(() => {
-            copyTextFallback(promptText, afterCopy);
-          });
-      } else {
-        copyTextFallback(promptText, afterCopy);
-      }
-    });
-  }
-
-  // Initialise preview with a generic message
-  updateCopilotPromptPreview(state.lastResults);
 }
 
 /* ===========================
@@ -3053,7 +2689,7 @@ function openResultsModal(results) {
   const body = document.getElementById("modal-body");
   if (!modal || !body) return;
 
-  const { cfg, util, costs, epi, bcr } = results;
+  const { cfg, util, epi, bcr } = results;
 
   const html = `
     <h3>Configuration summary</h3>
@@ -3087,7 +2723,7 @@ function openResultsModal(results) {
     )}, <strong>Total indicative epidemiological benefit:</strong> ${formatCurrency(
     results.totalBenefitAllCohorts,
     state.currency
-  )}, <strong>Benefit cost ratio:</strong> ${
+  )}, <strong>Benefit–cost ratio:</strong> ${
     bcr !== null && isFinite(bcr) ? bcr.toFixed(2) : "-"
   }.</p>
     <p><strong>Graduates:</strong> ${formatNumber(
@@ -3232,6 +2868,237 @@ function loadEpiConfig() {
 }
 
 /* ===========================
+   Copilot integration
+   =========================== */
+
+function buildCopilotScenarioObject(results) {
+  if (!results) return null;
+
+  const {
+    cfg,
+    util,
+    costs,
+    epi,
+    totalCostAllCohorts,
+    totalBenefitAllCohorts,
+    netBenefitAllCohorts,
+    bcr,
+    dceCba
+  } = results;
+
+  const scenarioName =
+    cfg.scenarioName && cfg.scenarioName.trim()
+      ? cfg.scenarioName.trim()
+      : "Current configuration";
+
+  const template = getCurrentCostTemplate(cfg.tier);
+
+  const natWtp =
+    dceCba &&
+    dceCba.profiles &&
+    dceCba.profiles.overall &&
+    typeof dceCba.profiles.overall.wtpAllCohorts === "number"
+      ? dceCba.profiles.overall.wtpAllCohorts
+      : null;
+
+  return {
+    tool: "STEPS – FETP India Decision Aid",
+    version: "soft-Copilot-2025-12",
+    preparedAtIso: new Date().toISOString(),
+    currency: state.currency,
+    scenario: {
+      name: scenarioName,
+      notes: cfg.scenarioNotes || "",
+      tier: cfg.tier,
+      career: cfg.career,
+      mentorship: cfg.mentorship,
+      delivery: cfg.delivery,
+      responseDays: Number(cfg.response),
+      traineesPerCohort: cfg.traineesPerCohort,
+      numberOfCohorts: cfg.numberOfCohorts,
+      costPerTraineePerMonthInInr: cfg.costPerTraineePerMonth,
+      costTemplate: template
+        ? {
+            id: template.id || null,
+            label: template.label || "",
+            oppRate: template.oppRate || 0
+          }
+        : null
+    },
+    assumptions: {
+      includeOpportunityCost: state.includeOpportunityCost,
+      planningHorizonYears: state.epiSettings.general.planningHorizonYears,
+      inrPerUsdDisplayRate: state.epiSettings.general.inrPerUsd,
+      epiSettingsByTier: state.epiSettings.tiers
+    },
+    outputs: {
+      endorsementPercent: util.endorseProb * 100,
+      optOutPercent: util.optOutProb * 100,
+      wtpPerTraineePerMonthInInr: util.wtpConfig,
+      epidemiological: {
+        graduatesAllCohorts: epi.graduatesAllCohorts,
+        outbreaksPerYearAllCohorts: epi.outbreaksPerYearAllCohorts,
+        totalEpiBenefitAllCohortsInInr: totalBenefitAllCohorts
+      },
+      economics: {
+        totalEconomicCostAllCohortsInInr: totalCostAllCohorts,
+        netBenefitAllCohortsInInr: netBenefitAllCohorts,
+        epiBenefitCostRatio: bcr
+      },
+      dceBasedBenefits: {
+        totalWtpAllCohortsInInr: natWtp,
+        benefitCostRatioDceOnly:
+          dceCba &&
+          dceCba.profiles &&
+          dceCba.profiles.overall &&
+          dceCba.profiles.overall.bcrDce !== null
+            ? dceCba.profiles.overall.bcrDce
+            : null,
+        npvDceOnlyInInr:
+          dceCba &&
+          dceCba.profiles &&
+          dceCba.profiles.overall
+            ? dceCba.profiles.overall.npvDce
+            : null,
+        benefitCostRatioDcePlusEpi:
+          dceCba &&
+          dceCba.profiles &&
+          dceCba.profiles.overall &&
+          dceCba.profiles.overall.bcrTotal !== null
+            ? dceCba.profiles.overall.bcrTotal
+            : null,
+        npvDcePlusEpiInInr:
+          dceCba &&
+          dceCba.profiles &&
+          dceCba.profiles.overall
+            ? dceCba.profiles.overall.npvTotal
+            : null
+      }
+    }
+  };
+}
+
+function buildCopilotPromptText(jsonString) {
+  return (
+    "You are helping interpret outputs from the “STEPS – FETP India Decision Aid” " +
+    "developed at Newcastle Business School in collaboration with the Government of India and partners such as WHO, CDC and the World Bank.\n\n" +
+    "The JSON below describes a Field Epidemiology Training Programme (FETP) configuration, including cost assumptions, " +
+    "preference-based willingness-to-pay (WTP) estimates from a discrete choice experiment, endorsement, epidemiological outputs, " +
+    "and economic indicators.\n\n" +
+    "Using this JSON as your sole quantitative input, prepare a structured policy briefing note aimed at senior decision makers " +
+    "in the Ministry of Health and Family Welfare, NCDC, NIE and development partners. Please:\n" +
+    "1. Summarise the scenario in plain language (tier, cohorts, trainees, delivery mode, response time and main design features).\n" +
+    "2. Report endorsement, WTP, epidemiological outputs, total economic costs and benefit–cost ratios using the currency indicated.\n" +
+    "3. Comment on value for money, affordability and whether the configuration appears attractive, borderline or poor.\n" +
+    "4. Highlight implementation and system-strengthening considerations (mentorship, delivery mode, response-time improvements).\n" +
+    "5. Provide clear recommendations on how this configuration could be used in national planning (e.g. pilots vs national scale-up) " +
+    "and what sensitivity analysis or further evidence would be most useful.\n\n" +
+    "Now use the following JSON as your data source. Do not invent new numbers; interpret what is provided:\n\n" +
+    jsonString
+  );
+}
+
+function updateCopilotTab() {
+  const target = document.getElementById("copilot-prompt");
+  const statusEl = document.getElementById("copilot-status");
+  if (!target) return;
+
+  if (!state.lastResults) {
+    const msg =
+      "Run your analysis first. Apply a configuration in the main STEPS tabs, then return here to generate a Copilot-ready briefing prompt.";
+    if ("value" in target) {
+      target.value = msg;
+    } else {
+      target.textContent = msg;
+    }
+    if (statusEl) {
+      statusEl.textContent = "No scenario applied yet.";
+    }
+    state.copilot.lastPrompt = msg;
+    return;
+  }
+
+  const scenarioObj = buildCopilotScenarioObject(state.lastResults);
+  const jsonString = JSON.stringify(scenarioObj, null, 2);
+  const promptText = buildCopilotPromptText(jsonString);
+
+  if ("value" in target) {
+    target.value = promptText;
+  } else {
+    target.textContent = promptText;
+  }
+
+  state.copilot.lastPrompt = promptText;
+
+  if (statusEl) {
+    const scenarioName =
+      scenarioObj && scenarioObj.scenario && scenarioObj.scenario.name
+        ? scenarioObj.scenario.name
+        : "Current configuration";
+    statusEl.textContent =
+      "Prompt prepared from: " +
+      scenarioName +
+      ". Copy it and paste into Microsoft Copilot in a new browser tab.";
+  }
+}
+
+async function copyCopilotPromptToClipboard() {
+  const target = document.getElementById("copilot-prompt");
+  if (!target) return;
+
+  const text =
+    typeof target.value === "string"
+      ? target.value
+      : target.textContent || "";
+
+  if (!text.trim()) {
+    showToast("Nothing to copy yet. Generate the prompt first.", "warning");
+    return;
+  }
+
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(text);
+    } else {
+      const range = document.createRange();
+      range.selectNodeContents(target);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+      document.execCommand("copy");
+      sel.removeAllRanges();
+    }
+    showToast(
+      "Copilot prompt copied. Open https://copilot.microsoft.com in a new tab and paste.",
+      "success"
+    );
+  } catch (e) {
+    showToast("Could not copy the prompt to the clipboard.", "error");
+  }
+}
+
+function setupCopilotIntegration() {
+  const refreshBtn = document.getElementById("copilot-refresh");
+  const copyBtn = document.getElementById("copilot-copy");
+
+  if (refreshBtn) {
+    refreshBtn.addEventListener("click", () => {
+      updateCopilotTab();
+      showToast("Copilot prompt refreshed from current configuration.", "success");
+    });
+  }
+
+  if (copyBtn) {
+    copyBtn.addEventListener("click", () => {
+      copyCopilotPromptToClipboard();
+    });
+  }
+
+  // Initial state
+  updateCopilotTab();
+}
+
+/* ===========================
    Setup main controls
    =========================== */
 
@@ -3258,7 +3125,8 @@ function setupModelAndCurrencyToggles() {
         btn.classList.add("active");
 
         if (btn.dataset.model) {
-          state.model = btn.dataset.model;
+          // Model toggles kept for compatibility but only mixed logit is used
+          state.model = "mxl";
           if (state.lastResults) {
             const cfg = state.lastResults.cfg;
             const updated = computeFullResults(cfg);
@@ -3332,7 +3200,7 @@ function setupSensitivityControls() {
   );
   const classSelect = document.getElementById(
     "benefit-class-scenario"
-  );
+  ); // kept for backwards compatibility if present
   const endorsementInput = document.getElementById(
     "endorsement-override"
   );
