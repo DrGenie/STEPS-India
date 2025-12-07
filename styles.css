@@ -1,5 +1,5 @@
 /* ===========================
-   Base layout and typography
+   Base layout and typographyyy
    =========================== */
 
 :root {
@@ -1463,7 +1463,7 @@ canvas {
 }
 
 /* ===========================
-   Scenario table chips
+   Scenario table chips (optional, via JS)
    =========================== */
 
 .chip {
@@ -1490,6 +1490,90 @@ canvas {
 .chip-incentive {
     border-color: #BAE6FD;
     color: var(--color-info);
+}
+
+/* ===========================
+   Misc
+   =========================== */
+
+.config-summary-card pre {
+    margin: 0;
+}
+
+/* Make interactive elements focus visible */
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+}
+
+/* ===========================
+   KPI tiles and export toolbar
+   =========================== */
+
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.kpi-card {
+    background-color: #F9FAFB;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border);
+    padding: 8px 10px;
+}
+
+.kpi-label {
+    font-size: 12px;
+    color: var(--color-text-muted);
+    margin-bottom: 2px;
+}
+
+.kpi-value {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.kpi-small-note {
+    font-size: 11px;
+    color: var(--color-text-muted);
+    margin-top: 2px;
+}
+
+.export-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+}
+
+/* ===========================
+   Tags / label pills
+   =========================== */
+
+.tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    font-size: 11px;
+    border-radius: 999px;
+    border: 1px solid var(--color-border);
+    background-color: #F9FAFB;
+    color: var(--color-text-muted);
+}
+
+.tag-strong {
+    border-color: var(--color-primary-soft);
+    background-color: var(--color-primary-soft);
+    color: var(--color-primary);
 }
 
 /* ===========================
@@ -1521,7 +1605,8 @@ canvas {
    Sensitivity / DCE benefits tab
    =========================== */
 
-.sensitivity-controls-panel {
+/* Compact control panel at the top of the tab */
+.sensitivity-controls {
     margin: 10px 0 12px;
     padding: 10px 12px;
     border-radius: var(--radius-md);
@@ -1529,8 +1614,253 @@ canvas {
     border: 1px solid var(--color-border);
 }
 
-.sensitivity-controls-panel .form-group {
+.sensitivity-controls-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px 16px;
+}
+
+.sensitivity-controls .form-group {
     margin: 0;
+}
+
+.sensitivity-controls-note {
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--color-text-muted);
+}
+
+/* Endorsement input inline label */
+.endorsement-inline-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Sensitivity results tables */
+.sensitivity-table {
+    min-width: 900px;
+}
+
+/* Optional wrapper for multiple tables */
+.sensitivity-tables-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-top: 8px;
+}
+
+/* Section labels for overall / latent classes */
+.sensitivity-section-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-text-muted);
+    margin-top: 6px;
+}
+
+/* Small caption under sensitivity tables */
+.sensitivity-caption {
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--color-text-muted);
+}
+
+/* Numeric columns for INR / ratios */
+.data-table th.numeric-col,
+.data-table td.numeric-col {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Subtle border between grouped sections */
+.sensitivity-table-divider-row td {
+    border-top: 2px solid var(--color-border-strong);
+}
+
+/* Highlight row when selected via JS */
+.sensitivity-row-selected {
+    background-color: #EEF2FF !important;
+}
+
+/* On narrower screens, make control panel stack cleanly */
+@media (max-width: 1024px) {
+    .sensitivity-controls-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 640px) {
+    .sensitivity-controls-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+/* ===========================
+   Copilot integration tab
+   =========================== */
+
+.copilot-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(0, 1.15fr);
+    gap: 16px;
+    align-items: flex-start;
+}
+
+@media (max-width: 1024px) {
+    .copilot-layout {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+.copilot-instructions {
+    font-size: 13px;
+    color: var(--color-text-muted);
+}
+
+.copilot-steps {
+    margin: 6px 0 0 18px;
+    padding: 0;
+    font-size: 13px;
+    color: var(--color-text);
+}
+
+.copilot-steps li {
+    margin-bottom: 4px;
+}
+
+.copilot-help-box {
+    margin-top: 10px;
+    padding: 8px 10px;
+    border-radius: var(--radius-md);
+    border: 1px dashed var(--color-border);
+    background-color: #F9FAFB;
+    font-size: 12px;
+    color: var(--color-text-muted);
+}
+
+/* Prompt + JSON panel */
+
+.copilot-prompt-panel {
+    background-color: #0F172A;
+    color: #E5E7EB;
+    border-radius: var(--radius-lg);
+    padding: 10px 12px 12px 12px;
+    position: relative;
+    box-shadow: var(--shadow-soft);
+    font-family: "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: 12px;
+}
+
+.copilot-prompt-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    margin-bottom: 6px;
+}
+
+.copilot-prompt-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #E5E7EB;
+}
+
+.copilot-prompt-hint {
+    font-size: 11px;
+    color: #9CA3AF;
+}
+
+.copilot-prompt-body {
+    max-height: 260px;
+    overflow: auto;
+    padding: 6px 8px;
+    border-radius: var(--radius-md);
+    background-color: #020617;
+    border: 1px solid #1F2937;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+/* Copy button inside dark panel */
+
+.copilot-copy-btn {
+    border-radius: 999px;
+    border: 1px solid #4B5563;
+    background-color: #111827;
+    color: #E5E7EB;
+    font-size: 11px;
+    padding: 4px 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    transition: background-color var(--transition-fast), border-color var(--transition-fast), transform var(--transition-fast);
+}
+
+.copilot-copy-btn:hover {
+    background-color: #1F2937;
+    border-color: #6B7280;
+    transform: translateY(-1px);
+}
+
+.copilot-copy-icon {
+    font-size: 11px;
+}
+
+/* Status chip under the prompt */
+
+.copilot-status-row {
+    margin-top: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 11px;
+    color: #9CA3AF;
+}
+
+.copilot-status-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 600;
+    border: 1px solid #374151;
+    background-color: #111827;
+    color: #E5E7EB;
+}
+
+/* Compact “Open Copilot” helper area */
+
+.copilot-actions {
+    margin-top: 10px;
+    padding: 8px 10px;
+    border-radius: var(--radius-md);
+    background-color: #F9FAFB;
+    border: 1px solid var(--color-border);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.copilot-actions-text {
+    font-size: 12px;
+    color: var(--color-text-muted);
+}
+
+/* Optional small badge for the Copilot URL */
+
+.copilot-url-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 999px;
+    border: 1px solid var(--color-border);
+    background-color: #FFFFFF;
+    font-size: 11px;
+    color: var(--color-primary);
 }
 
 /* ===========================
@@ -1572,66 +1902,5 @@ canvas {
     .data-table th,
     .data-table td {
         border-color: #9CA3AF;
-    }
-}
-
-/* ===========================
-   Copilot tab
-   =========================== */
-
-.copilot-intro {
-    margin-bottom: 8px;
-}
-
-.copilot-steps {
-    margin-top: 4px;
-    margin-bottom: 8px;
-}
-
-.copilot-layout {
-    display: grid;
-    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1.25fr);
-    gap: 16px;
-    margin-top: 10px;
-}
-
-.copilot-column {
-    min-width: 0;
-}
-
-.copilot-prepared-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    margin-bottom: 6px;
-}
-
-.copilot-textarea {
-    width: 100%;
-    min-height: 260px;
-    font-family: "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-    font-size: 12px;
-    border-radius: var(--radius-md);
-    border: 1px solid var(--color-border);
-    padding: 8px 8px;
-    background-color: #F9FAFB;
-    color: #111827;
-    resize: vertical;
-}
-
-.copilot-reminder {
-    margin-top: 8px;
-    padding: 8px 10px;
-    border-radius: var(--radius-md);
-    background-color: #EFF6FF;
-    border: 1px solid #BFDBFE;
-    font-size: 13px;
-    color: var(--color-text);
-}
-
-@media (max-width: 960px) {
-    .copilot-layout {
-        grid-template-columns: minmax(0, 1fr);
     }
 }
