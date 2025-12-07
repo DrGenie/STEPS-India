@@ -110,7 +110,9 @@
                         mentorship intensity, response time, delivery mode, number of cohorts, cohort size and cost per trainee per month.
                     </li>
                     <li>Keep the cost slider within the range used in the experiment (75,000 to 400,000 rupees per trainee per month).</li>
-                    <li>Select the preference model: average mixed logit or the supportive latent class group.</li>
+                    <li>Apply the configuration. The tool uses the mixed logit preference model from the discrete choice experiment
+                        to calculate endorsement and willingness-to-pay values for the chosen design.
+                    </li>
                     <li>Click <strong>Apply configuration</strong> to update all calculations, then use
                         <strong>View results summary</strong> to open a scenario summary with headline recommendations.
                     </li>
@@ -266,13 +268,13 @@
                         </div>
                     </div>
                     <div class="attr-table-row">
-                        <div class="attr-cell-title">Preference models</div>
+                        <div class="attr-cell-title">Preference model</div>
                         <div class="attr-cell-levels">
-                            Mixed logit model and a supportive latent class group from the two-class latent class model.
+                            Mixed logit preference model estimated from the discrete choice experiment.
                         </div>
                         <div class="attr-cell-expl">
-                            Users can switch between the average mixed logit model and the supportive latent class group.
-                            Endorsement and willingness-to-pay values change accordingly, which is useful for sensitivity analysis.
+                            STEPS uses a mixed logit preference model to predict endorsement of each configuration and
+                            to derive willingness-to-pay measures that feed into economic summaries and sensitivity analysis.
                         </div>
                     </div>
                 </div>
@@ -396,18 +398,10 @@
 
                     <div class="form-group">
                         <label>Preference model</label>
-                        <div class="pill-toggle-group">
-                            <button type="button" class="pill-toggle active" data-model="mxl">
-                                Average mixed logit
-                            </button>
-                            <button type="button" class="pill-toggle" data-model="lc2">
-                                Supportive group (latent class)
-                            </button>
-                        </div>
                         <p class="hint">
-                            The supportive group uses the Class 2 parameters from the latent class model. Class 1 represents
-                            training resisters who are largely cost insensitive, with imprecisely estimated willingness to pay.
-                            It is not recommended for policy targeting.
+                            All endorsement and willingness-to-pay results in STEPS are based on a mixed logit preference model
+                            estimated from the discrete choice experiment. The model is applied automatically to the configuration
+                            you select.
                         </p>
                     </div>
 
@@ -486,7 +480,7 @@
                 <div class="config-endorsement-row">
                     <div class="config-endorsement-label">
                         <span class="metric-label">Endorsement (current model)</span>
-                        <button type="button" class="info-icon" data-tooltip="Predicted share of stakeholders who would choose this FETP configuration rather than the opt-out option, based on the selected preference model." aria-label="Endorsement information">i</button>
+                        <button type="button" class="info-icon" data-tooltip="Predicted share of stakeholders who would choose this FETP configuration rather than the opt-out option, based on the mixed logit preference model." aria-label="Endorsement information">i</button>
                     </div>
                     <span class="metric-value config-endorsement-value" id="config-endorsement-value">Apply configuration</span>
                 </div>
@@ -520,8 +514,8 @@
                     <button type="button" class="info-icon" data-tooltip="Shows the predicted share of stakeholders who would endorse the FETP configuration and the share who would choose not to invest, based on the discrete choice experiment." aria-label="Endorsement and opt-out information">i</button>
                 </div>
                 <p class="hint">
-                    These percentages are obtained by plugging the chosen configuration into the mixed logit or latent class
-                    model and comparing the utility of any FETP option with the utility of opting out. They summarise how
+                    These percentages are obtained by plugging the chosen configuration into the mixed logit preference model
+                    and comparing the utility of any FETP option with the utility of opting out. They summarise how
                     attractive the configuration is to stakeholders in the preference study.
                 </p>
                 <div class="metric-pair metric-pair-tight">
@@ -887,26 +881,6 @@
                     </div>
 
                     <div class="form-group">
-                        <label for="benefit-class-scenario">
-                            Stakeholder and latent class view
-                            <button type="button" class="info-icon" aria-label="Stakeholder view information"
-                                    data-tooltip="Select whether results are shown for the overall sample, the supportive latent class (more favourable to FETP investment) or a more conservative or sceptical class if available.">
-                                i
-                            </button>
-                        </label>
-                        <select id="benefit-class-scenario">
-                            <option value="overall">Overall sample</option>
-                            <option value="supportive">Supportive class</option>
-                            <option value="conservative">Conservative / sceptical class</option>
-                        </select>
-                        <p class="hint">
-                            This control allows you to view the same configurations from different stakeholder perspectives,
-                            which is useful when comparing business cases for groups with more or less cautious attitudes
-                            towards FETP investment.
-                        </p>
-                    </div>
-
-                    <div class="form-group">
                         <label for="endorsement-override">
                             Endorsement rate for sensitivity (%)
                             <button type="button" class="info-icon" aria-label="Endorsement rate override information"
@@ -952,6 +926,8 @@
                     <tr>
                         <th>Scenario</th>
                         <th>Cost (INR, chosen horizon)</th>
+                        <th>Total economic cost, all cohorts (million ₹)</th>
+                        <th>Net benefit, all cohorts (million ₹)</th>
                         <th>Total WTP benefit (INR)</th>
                         <th>WTP from outbreak response capacity (INR)</th>
                         <th>Epi-based outbreak benefit (INR)</th>
@@ -966,13 +942,14 @@
                     <tbody id="dce-benefits-table-body">
                     <!-- Filled dynamically from script.js:
                          - One row per scenario (current configuration and saved scenarios)
-                         - Using selected benefit definition, stakeholder view and endorsement assumptions -->
+                         - Using selected benefit definition and endorsement assumptions -->
                     </tbody>
                 </table>
             </div>
 
             <p class="hint">
                 In this table, the cost column shows the relevant economic cost for each scenario over the selected time horizon.
+                Total economic cost and net benefit columns report values aggregated across all cohorts in millions of rupees.
                 Total willingness-to-pay benefits summarise how much value stakeholders place on each configuration, while the
                 outbreak-response column isolates the part of that value linked to faster detection and response. Epidemiological
                 outbreak benefits appear when the outbreak benefit switch is on and the epidemiological module is active. The
@@ -984,8 +961,8 @@
 
             <h3>Detailed sensitivity matrix</h3>
             <p>
-                For users who wish to see a more granular breakdown, the detailed matrix below retains the full set of columns
-                originally defined for the sensitivity view. It can be used alongside the headline table above to cross-check
+                For users who wish to see a more granular breakdown, the detailed matrix below retains the full set of
+                core columns for the sensitivity view. It can be used alongside the headline table above to cross-check
                 results and document alternative model specifications or stakeholder group assumptions.
             </p>
 
@@ -997,17 +974,15 @@
                         <th>Model</th>
                         <th>Endorsement rate</th>
                         <th>Cost per cohort (INR)</th>
-                        <th>Total WTP benefit per cohort (overall, INR)</th>
+                        <th>Total WTP benefit per cohort (INR)</th>
                         <th>WTP benefit from response capacity (INR)</th>
                         <th>Epi-based outbreak benefit per cohort (INR)</th>
                         <th>BCR (DCE WTP only)</th>
                         <th>NPV (DCE WTP only, INR)</th>
                         <th>BCR (DCE WTP + epi)</th>
                         <th>NPV (DCE WTP + epi, INR)</th>
-                        <th>WTP benefit per cohort (supportive class, INR)</th>
-                        <th>BCR (supportive class, WTP only)</th>
-                        <th>Effective WTP benefit per cohort (overall, INR)</th>
-                        <th>Effective combined benefit per cohort (overall, INR)</th>
+                        <th>Effective WTP benefit per cohort (INR)</th>
+                        <th>Effective combined benefit per cohort (INR)</th>
                     </tr>
                     </thead>
                     <tbody id="sensitivity-table-body">
@@ -1020,7 +995,7 @@
 
             <p class="hint">
                 The “Model” column shows which preference model underpins the willingness-to-pay values in each row
-                for example “MXL overall” or “LC supportive class”. Endorsement-adjusted effective benefits multiply
+                for example “MXL overall”. Endorsement-adjusted effective benefits multiply
                 the benefit measure by the endorsement rate for that scenario and are intended for sensitivity analysis
                 rather than for primary cost–benefit results.
             </p>
@@ -1358,7 +1333,7 @@ STEPS assumption log will appear here after advanced settings and a configuratio
                 <p>
                     The technical appendix explains how STEPS uses discrete choice experiment estimates, cost
                     templates, willingness-to-pay measures and epidemiological multipliers. It includes numerical
-                    examples based on the final mixed logit and latent class models and the willingness-to-pay results.
+                    examples based on the final mixed logit model and the willingness-to-pay results.
                 </p>
                 <p>
                     Open the full appendix in a separate window for easier reading or printing. The appendix is written
