@@ -38,69 +38,6 @@ const MXL_COEFS = {
   costPerThousand: -0.005
 };
 
-const LC2_COEFS = {
-  ascProgram: 0.098,
-  ascOptOut: -2.543,
-  tier: {
-    frontline: 0.0,
-    intermediate: 0.087,
-    advanced: 0.422
-  },
-  career: {
-    certificate: 0.0,
-    uniqual: -0.024,
-    career_path: -0.123
-  },
-  mentorship: {
-    low: 0.0,
-    medium: 0.342,
-    high: 0.486
-  },
-  delivery: {
-    blended: 0.0,
-    inperson: -0.017,
-    online: -0.700
-  },
-  response: {
-    30: 0.0,
-    15: 0.317,
-    7: 0.504
-  },
-  costPerThousand: -0.001
-};
-
-/* Conservative class (for endorsement sensitivity only) */
-const LC1_COEFS = {
-  ascProgram: 0.181,
-  ascOptOut: 1.222,
-  tier: {
-    frontline: 0.0,
-    intermediate: 0.070,
-    advanced: 0.045
-  },
-  career: {
-    certificate: 0.0,
-    uniqual: 0.098,
-    career_path: -0.027
-  },
-  mentorship: {
-    low: 0.0,
-    medium: 0.327,
-    high: 0.636
-  },
-  delivery: {
-    blended: 0.0,
-    inperson: -0.476,
-    online: -0.798
-  },
-  response: {
-    30: 0.0,
-    15: 0.640,
-    7: 0.513
-  },
-  costPerThousand: 0.0001
-};
-
 /* ===========================
    Cost templates (fallback)
    =========================== */
@@ -358,7 +295,7 @@ Provide a short set of policy recommendations. Indicate whether the scenario is 
    =========================== */
 
 const state = {
-  model: "mxl",             // "mxl" or "lc2"
+  model: "mxl",             // always mixed logit in this version
   currency: "INR",          // "INR" or "USD" display
   includeOpportunityCost: true,
   epiSettings: JSON.parse(JSON.stringify(DEFAULT_EPI_SETTINGS)),
@@ -427,9 +364,8 @@ function logistic(x) {
   return 1 / (1 + Math.exp(-x));
 }
 
+/* In this version all preference calculations use the mixed logit only */
 function getModelCoefs(modelId) {
-  if (modelId === "lc2") return LC2_COEFS;
-  if (modelId === "lc1") return LC1_COEFS;
   return MXL_COEFS;
 }
 
@@ -614,29 +550,55 @@ function getCostConfigForTier(tier) {
 
 function getCostTemplate(tier, sourceId) {
   const cfg = getCostConfigForTier(tier);
-  if (sourceId && cfg[sourceId]) return cfg[sourceId];
   const keys = Object.keys(cfg);
   if (keys.length === 0) return null;
+
+  // If sourceId matches a key directly
+  if (sourceId && cfg[sourceId]) {
+    return cfg[sourceId];
+  }
+
+  // Otherwise try to match by template.id
+  if (sourceId) {
+    const matchById = keys
+      .map((k) => cfg[k])
+      .find((tpl) => tpl && tpl.id === sourceId);
+    if (matchById) {
+      return matchById;
+    }
+  }
+
+  // Fallback: first available template
   return cfg[keys[0]];
 }
 
 function updateCostSourceOptions(tier) {
   const select = document.getElementById("cost-source");
   if (!select) return;
+
   const cfg = getCostConfigForTier(tier);
   const keys = Object.keys(cfg);
+
   select.innerHTML = "";
+
+  if (keys.length === 0) {
+    state.currentCostSourceId = null;
+    return;
+  }
+
   keys.forEach((key) => {
+    const tpl = cfg[key];
+    if (!tpl) return;
+    const id = tpl.id || key;
+    tpl.id = id; // normalise configuration so templates always carry an id
     const opt = document.createElement("option");
-    opt.value = cfg[key].id;
-    opt.textContent = cfg[key].label;
+    opt.value = id;
+    opt.textContent = tpl.label || key;
     select.appendChild(opt);
   });
-  if (keys.length > 0) {
-    state.currentCostSourceId = cfg[keys[0]].id;
-  } else {
-    state.currentCostSourceId = null;
-  }
+
+  const firstTpl = cfg[keys[0]];
+  state.currentCostSourceId = (firstTpl && firstTpl.id) || keys[0];
 }
 
 function getEpiTierSettings(tier) {
@@ -660,9 +622,7 @@ function computeScenarioResults(cfg, options = {}) {
   const responseMultiplier = RESPONSE_TIME_MULTIPLIERS[cfg.response] || 1.0;
 
   const overall = computeEndorsementAndWtp(cfg, "mxl");
-  const supportive = computeEndorsementAndWtp(cfg, "lc2");
-  const conservative = computeEndorsementAndWtp(cfg, "lc1");
-  const selected = computeEndorsementAndWtp(cfg, modelId);
+  const selected = overall;
 
   const endorse = selected.endorsement;
   const optOut = selected.optOutShare;
@@ -750,8 +710,6 @@ function computeScenarioResults(cfg, options = {}) {
     endorse,
     optOut,
     overall,
-    supportive,
-    conservative,
     wtpPerTraineePerMonth,
     wtpComponents,
     responseWtpPerTraineePerMonth,
@@ -1409,15 +1367,11 @@ function getBenefitDefinitionSettings() {
   };
 }
 
+/* All class views now use the mixed logit only */
 function computeScenarioForClassView(baseCfg, classView, includeEpi, benefitDefinition, endorsementOverride) {
   const cfg = baseCfg;
   const results = computeScenarioResults(cfg, {
-    modelId:
-      classView === "supportive"
-        ? "lc2"
-        : classView === "conservative"
-        ? "lc1"
-        : "mxl"
+    modelId: "mxl"
   });
 
   const endorseUsed =
@@ -1586,7 +1540,7 @@ function buildSensitivityMatrixRow(label, scenarioCfg, includeEpi) {
   );
   const supportiveCalc = computeScenarioForClassView(
     scenarioCfg,
-    "supportive",
+    "overall",
     includeEpi,
     "wtp_only",
     null
@@ -1859,8 +1813,7 @@ function updateScenarioTable() {
     tdCostPerTrainee.className = "numeric-cell";
 
     const tdModel = document.createElement("td");
-    tdModel.textContent =
-      r.modelId === "lc2" ? "Supportive group" : "Average MXL";
+    tdModel.textContent = "Average MXL (overall sample)";
 
     const tdEndorse = document.createElement("td");
     tdEndorse.textContent = formatPercent(r.endorse * 100, 1);
@@ -1978,7 +1931,7 @@ function exportScenariosToExcel() {
       sc.cfg.numberOfCohorts,
       sc.cfg.traineesPerCohort,
       sc.cfg.costPerTraineePerMonth,
-      r.modelId === "lc2" ? "Supportive group" : "Average MXL",
+      "Average MXL (overall sample)",
       (r.endorse * 100).toFixed(1),
       r.wtpTotalAllCohorts,
       r.totalEconomicCostAllCohorts,
@@ -2020,7 +1973,7 @@ function exportScenariosToPdf() {
     y += 5;
     const lines = [
       `Tier: ${getTierLabel(sc.cfg.tier)}, cohorts: ${sc.cfg.numberOfCohorts}, trainees per cohort: ${sc.cfg.traineesPerCohort}`,
-      `Endorsement: ${(r.endorse * 100).toFixed(1)} %, model: ${r.modelId === "lc2" ? "Supportive group" : "Average MXL"}`,
+      `Endorsement: ${(r.endorse * 100).toFixed(1)} %, model: Average MXL (overall sample)`,
       `Total economic cost (all cohorts): ${formatCurrencyInr(r.totalEconomicCostAllCohorts)}`,
       `Total WTP (all cohorts): ${formatCurrencyInr(r.wtpTotalAllCohorts)}`,
       `Total epidemiological benefit (all cohorts): ${formatCurrencyInr(r.epiBenefitAllCohorts)}`,
@@ -2488,13 +2441,14 @@ function toggleCurrency(button) {
 function togglePreferenceModel(button) {
   const model = button.dataset.model;
   if (!model) return;
-  state.model = model;
+  // In this version we always use the mixed logit, regardless of toggle
+  state.model = "mxl";
   document
     .querySelectorAll(".pill-toggle[data-model]")
     .forEach((btn) => {
       btn.classList.toggle(
         "active",
-        btn.dataset.model === model
+        btn.dataset.model === "mxl"
       );
     });
   if (state.lastResults) {
@@ -2880,6 +2834,29 @@ function init() {
   initTabs();
   initTooltips();
   initGuidedTour();
+
+  /* Remove latent-class UI: only keep overall mixed logit option in dropdowns/toggles */
+
+  const classScenarioSelect = document.getElementById("benefit-class-scenario");
+  if (classScenarioSelect) {
+    for (let i = classScenarioSelect.options.length - 1; i >= 0; i--) {
+      const opt = classScenarioSelect.options[i];
+      if (opt.value && opt.value !== "overall") {
+        classScenarioSelect.remove(i);
+      }
+    }
+    classScenarioSelect.value = "overall";
+  }
+
+  document
+    .querySelectorAll(".pill-toggle[data-model]")
+    .forEach((btn) => {
+      if (btn.dataset.model && btn.dataset.model !== "mxl") {
+        if (btn.parentNode) {
+          btn.parentNode.removeChild(btn);
+        }
+      }
+    });
 
   const costSlider = document.getElementById("cost-slider");
   if (costSlider) {
