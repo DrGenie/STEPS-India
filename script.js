@@ -39,6 +39,13 @@ const MXL_COEFS = {
 };
 
 /* ===========================
+   Embedded training video
+   =========================== */
+
+const STEPS_VIDEO_EMBED_URL =
+  "https://uonstaff-my.sharepoint.com/personal/mg844_newcastle_edu_au/_layouts/15/embed.aspx?UniqueId=df59fa1b-0cd5-47fa-b743-cdd486b3b82c&embed=%7B%22ust%22%3Atrue%2C%22hv%22%3A%22CopyEmbedCode%22%7D&referrer=StreamWebApp&referrerScenario=EmbedDialog.Create";
+
+/* ===========================
    Cost templates (combined, all institutions)
    Uses the harmonised table supplied in the prompt
    =========================== */
@@ -2279,10 +2286,6 @@ function handleCopilotOpenAndCopy() {
       statusEl.textContent =
         "Prompt prepared. Copy it manually from the box below and paste into Microsoft Copilot.";
     }
-    showToast(
-      "Prompt prepared. Please copy it manually.",
-      "warning"
-    );
   }
 
   window.open("https://copilot.microsoft.com/", "_blank", "noopener");
@@ -2371,6 +2374,112 @@ function startQuickTour() {
     "Quick tour: start with Configuration, then view Results, Costing, National simulation, Sensitivity and Copilot tabs.",
     "info"
   );
+}
+
+/* ===========================
+   Info tooltip handling
+   =========================== */
+
+function initInfoTooltips() {
+  const tooltip = document.createElement("div");
+  tooltip.id = "steps-tooltip";
+  tooltip.className = "steps-tooltip hidden";
+  document.body.appendChild(tooltip);
+
+  function showTooltip(e) {
+    const target = e.currentTarget;
+    const text =
+      target.getAttribute("data-tooltip") ||
+      (target.dataset && target.dataset.tooltip) ||
+      "";
+    if (!text) return;
+    tooltip.textContent = text;
+    tooltip.classList.remove("hidden");
+
+    const rect = target.getBoundingClientRect();
+    const ttRect = tooltip.getBoundingClientRect();
+
+    let top = window.scrollY + rect.top - ttRect.height - 8;
+    let left =
+      window.scrollX +
+      rect.left +
+      rect.width / 2 -
+      ttRect.width / 2;
+
+    if (top < window.scrollY + 4) {
+      top = window.scrollY + rect.bottom + 8;
+    }
+    if (left < window.scrollX + 4) {
+      left = window.scrollX + 4;
+    }
+    if (left + ttRect.width > window.scrollX + window.innerWidth - 4) {
+      left =
+        window.scrollX + window.innerWidth - ttRect.width - 4;
+    }
+
+    tooltip.style.top = `${top}px`;
+    tooltip.style.left = `${left}px`;
+  }
+
+  function hideTooltip() {
+    tooltip.classList.add("hidden");
+  }
+
+  const targets = document.querySelectorAll(
+    "[data-tooltip], .info-tooltip, .info-icon"
+  );
+  targets.forEach((el) => {
+    el.addEventListener("mouseenter", showTooltip);
+    el.addEventListener("mouseleave", hideTooltip);
+    el.addEventListener("focus", showTooltip);
+    el.addEventListener("blur", hideTooltip);
+  });
+
+  window.addEventListener("scroll", hideTooltip);
+  window.addEventListener("resize", hideTooltip);
+}
+
+/* ===========================
+   Video tab initialisation
+   =========================== */
+
+function initVideoTab() {
+  const frame = document.getElementById("steps-video-frame");
+  if (frame) {
+    if (!frame.src || frame.src === "") {
+      frame.src = frame.dataset.src || STEPS_VIDEO_EMBED_URL;
+    }
+  }
+
+  const copyBtn = document.getElementById("video-copy-link");
+  if (copyBtn && frame) {
+    copyBtn.addEventListener("click", () => {
+      const url = frame.src || frame.dataset.src || STEPS_VIDEO_EMBED_URL;
+      if (!url) return;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard
+          .writeText(url)
+          .then(() => {
+            showToast("Video link copied to clipboard", "success");
+          })
+          .catch(() => {
+            showToast("Unable to copy video link", "error");
+          });
+      } else {
+        showToast("Copy not supported in this browser", "warning");
+      }
+    });
+  }
+
+  const openBtn = document.getElementById("video-open-full");
+  if (openBtn && frame) {
+    openBtn.addEventListener("click", () => {
+      const url = frame.src || frame.dataset.src || STEPS_VIDEO_EMBED_URL;
+      if (url) {
+        window.open(url, "_blank", "noopener");
+      }
+    });
+  }
 }
 
 /* ===========================
@@ -2586,6 +2695,12 @@ document.addEventListener("DOMContentLoaded", () => {
       handleCopilotOpenAndCopy();
     });
   }
+
+  // Tooltips
+  initInfoTooltips();
+
+  // Video tab
+  initVideoTab();
 
   // Initial cost source options and cost display
   state.currentTier =
