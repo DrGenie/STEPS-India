@@ -1,5 +1,5 @@
 /* ===================================================
-   STEPS FETP India Decision Aiidd
+   STEPS FETP India Decision Aiidd tool
    Script with interactive DCE sensitivity / benefits
    and Copilot interpretation helper
    =================================================== */
