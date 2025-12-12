@@ -1014,9 +1014,11 @@ function getConfigFromForm() {
   appState.epiSettings.general.planningHorizonYears =
     planningHorizonYears;
 
-  const oppIncluded = document
-    .getElementById("opp-toggle")
-    .classList.contains("on");
+  const oppToggle = document.getElementById("opp-toggle");
+  const oppIncluded = oppToggle
+    ? oppToggle.classList.contains("on")
+    : false;
+
   const scenarioName =
     document.getElementById("scenario-name").value.trim() ||
     `${tier} ${mentorship} ${cohorts} cohorts`;
@@ -2385,8 +2387,8 @@ function refreshSensitivityTables() {
         ? combinedBenefit / s.costAll
         : null;
 
-    const npvDceOnly = s.npvDceOnly;
-    const npvCombined = s.npvCombined;
+    const npvDceOnly = s.wtpAll - s.costAll;
+    const npvCombined = combinedBenefit - s.costAll;
 
     const trHeadline = document.createElement("tr");
     trHeadline.innerHTML = `
@@ -3190,7 +3192,9 @@ function initEventHandlers() {
           ? "Opportunity cost included"
           : "Opportunity cost excluded";
       }
+
       if (appState.currentScenario) {
+        appState.currentScenario.config.opportunityCostIncluded = on;
         const newScenario = computeScenario(
           appState.currentScenario.config
         );
