@@ -1,3 +1,4 @@
+
 /* ===========================
    Base layout and typography
    =========================== */
@@ -1375,7 +1376,7 @@ canvas {
 }
 
 /* ===========================
-   Assumption log
+   Assumption log and settings log
    =========================== */
 
 .assumption-log {
@@ -1392,6 +1393,21 @@ canvas {
     border-radius: var(--radius-md);
     max-height: 220px;
     overflow: auto;
+}
+
+/* Settings log box used in the Settings tab */
+.advanced-log-box {
+    margin-top: 8px;
+    padding: 8px 10px;
+    border-radius: var(--radius-md);
+    background-color: #F9FAFB;
+    border: 1px solid var(--color-border);
+    font-size: 12px;
+    color: var(--color-text-muted);
+    max-height: 200px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    line-height: 1.4;
 }
 
 /* ===========================
@@ -2183,6 +2199,52 @@ textarea:focus-visible {
 
 .copilot-copy-icon {
     font-size: 11px;
+}
+
+/* ===========================
+   PDF export specific styling
+   =========================== */
+
+/* Wrapper and headings used when exporting sensitivity tables to PDF */
+.pdf-export-wrapper {
+    font-size: 12px;
+    color: var(--color-text);
+}
+
+.pdf-export-title {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.pdf-export-note {
+    font-size: 11px;
+    color: var(--color-text-muted);
+    margin-bottom: 6px;
+}
+
+/* Table layout tuned for PDF rendering to keep content within page borders */
+.pdf-export-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px;
+    table-layout: fixed;
+}
+
+.pdf-export-table th,
+.pdf-export-table td {
+    border: 1px solid var(--color-border);
+    padding: 4px 4px;
+    text-align: left;
+    vertical-align: top;
+    word-wrap: break-word;
+    white-space: normal;
+}
+
+.pdf-export-table th {
+    background-color: var(--color-table-header);
+    font-weight: 600;
+    color: var(--color-text-muted);
 }
 
 /* ===========================
