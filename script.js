@@ -1,4 +1,4 @@
-// script.js
+// scriptt.js
 (function () {
   "use strict";
 
