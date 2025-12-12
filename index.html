@@ -65,16 +65,17 @@
          data-tour-step="tabs"
          data-tour-title="Navigation tabs"
          data-tour-content="Use these tabs to move between configuration, results, costing, national simulation, WTP-based benefits and sensitivity, Copilot briefing, saved scenarios and settings.">
-        <button class="tab-link active" data-tab="intro" type="button">Introduction</button>
-        <button class="tab-link" data-tab="attributes" type="button">Attributes and levels</button>
-        <button class="tab-link" data-tab="settings" type="button">Settings</button>
-        <button class="tab-link" data-tab="config" type="button">Configuration</button>
-        <button class="tab-link" data-tab="results" type="button">Results</button>
-        <button class="tab-link" data-tab="costing" type="button">Costing details</button>
-        <button class="tab-link" data-tab="natsim" type="button">National simulation</button>
-        <button class="tab-link" data-tab="sensitivity" type="button">WTP-based benefits / Sensitivity</button>
-        <button class="tab-link" data-tab="copilot" type="button">Copilot briefing</button>
-        <button class="tab-link" data-tab="scenarios" type="button">Saved scenarios</button>
+        <!-- Added tablink class as a compatibility hook (no visual change) -->
+        <button class="tab-link tablink active" data-tab="intro" type="button">Introduction</button>
+        <button class="tab-link tablink" data-tab="attributes" type="button">Attributes and levels</button>
+        <button class="tab-link tablink" data-tab="settings" type="button">Settings</button>
+        <button class="tab-link tablink" data-tab="config" type="button">Configuration</button>
+        <button class="tab-link tablink" data-tab="results" type="button">Results</button>
+        <button class="tab-link tablink" data-tab="costing" type="button">Costing details</button>
+        <button class="tab-link tablink" data-tab="natsim" type="button">National simulation</button>
+        <button class="tab-link tablink" data-tab="sensitivity" type="button">WTP-based benefits / Sensitivity</button>
+        <button class="tab-link tablink" data-tab="copilot" type="button">Copilot briefing</button>
+        <button class="tab-link tablink" data-tab="scenarios" type="button">Saved scenarios</button>
     </nav>
 
     <!-- INTRO TAB -->
@@ -367,7 +368,9 @@
                     indicative value per outbreak, the planning horizon used in benefit calculations and the INR per USD rate for display.
                     The technical appendix explains how WTP from the preference study and epidemiological outputs are combined in benefit cost ratios.
                 </p>
-                <form id="advanced-settings-form" class="form-grid">
+
+                <!-- Added onsubmit return false so submit will not reload the page, while still triggering submit listeners -->
+                <form id="advanced-settings-form" class="form-grid" onsubmit="return false;">
                     <div class="form-group">
                         <label for="adv-non-outbreak-value-per-graduate">
                             Non outbreak value per graduate per year (INR)
@@ -483,18 +486,28 @@
 
                     <div class="form-group form-group-wide">
                         <div class="button-row">
-                            <button type="button"
-                                    id="adv-apply-settings"
-                                    class="btn-primary"
-                                    data-toast-message="Settings applied for this session and results updated.">
-                                Apply settings
-                            </button>
-                            <button type="button"
-                                    id="adv-reset-settings"
-                                    class="btn-secondary"
-                                    data-toast-message="Settings reset to default values for this session.">
-                                Reset to default values
-                            </button>
+                            <!-- Compatibility wrappers so script listeners on alternative ids will still catch bubbled clicks -->
+                            <span id="apply-settings-btn" style="display: contents;">
+                                <span id="apply-settings" style="display: contents;">
+                                    <button type="submit"
+                                            id="adv-apply-settings"
+                                            class="btn-primary"
+                                            data-toast-message="Settings applied for this session and results updated.">
+                                        Apply settings
+                                    </button>
+                                </span>
+                            </span>
+
+                            <span id="reset-settings-btn" style="display: contents;">
+                                <span id="reset-settings" style="display: contents;">
+                                    <button type="button"
+                                            id="adv-reset-settings"
+                                            class="btn-secondary"
+                                            data-toast-message="Settings reset to default values for this session.">
+                                        Reset to default values
+                                    </button>
+                                </span>
+                            </span>
                         </div>
                     </div>
                 </form>
@@ -504,11 +517,15 @@
                     This log records changes made to settings during the current browser session. It can be used to
                     document assumptions for workshops, annexes and discussions with ministries and partners.
                 </p>
-                <div id="adv-settings-log"
-                     class="advanced-log-box"
-                     aria-live="polite">
-                    <div class="advanced-log-placeholder">
-                        No settings have been applied in this session yet. Once you click Apply settings, a time stamped summary of the inputs will appear here.
+
+                <!-- Wrapper id added as an alias so scripts using settings-log-box will write to a visible container -->
+                <div id="settings-log-box" style="display: contents;">
+                    <div id="adv-settings-log"
+                         class="advanced-log-box"
+                         aria-live="polite">
+                        <div class="advanced-log-placeholder">
+                            No settings have been applied in this session yet. Once you click Apply settings, a time stamped summary of the inputs will appear here.
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1329,14 +1346,21 @@
                         <p class="hint">
                             These options adjust the indicative outbreak cost saving used in combined benefit calculations for this tab.
                         </p>
+
                         <div class="button-row">
-                            <button id="apply-outbreak-value-btn"
-                                    type="button"
-                                    class="btn-secondary"
-                                    data-toast-message="Outbreak value for sensitivity updated. Sensitivity tables and charts now use the selected value.">
-                                Apply value
-                            </button>
+                            <!-- Compatibility wrappers so scripts listening on alternative ids will still catch bubbled clicks -->
+                            <span id="apply-value-btn" style="display: contents;">
+                                <span id="apply-sensitivity-value-btn" style="display: contents;">
+                                    <button id="apply-outbreak-value-btn"
+                                            type="button"
+                                            class="btn-secondary"
+                                            data-toast-message="Outbreak value for sensitivity updated. Sensitivity tables and charts now use the selected value.">
+                                        Apply value
+                                    </button>
+                                </span>
+                            </span>
                         </div>
+
                         <p class="hint">
                             After changing the dropdown, click Apply value to refresh the sensitivity calculations and charts for the selected outbreak value.
                         </p>
@@ -1389,10 +1413,17 @@
                     <button id="export-sensitivity-benefits-excel" type="button" class="btn-secondary" data-toast-message="Sensitivity table exported to Excel.">
                         Download sensitivity table (Excel)
                     </button>
-                    <button id="export-sensitivity-benefits-pdf" type="button" class="btn-secondary" data-toast-message="Sensitivity table exported to a formatted PDF.">
-                        Download sensitivity table (PDF)
-                    </button>
+
+                    <!-- Wrapper ids added as aliases for PDF export hooks -->
+                    <span id="download-sensitivity-pdf-btn" style="display: contents;">
+                        <span id="export-sensitivity-pdf" style="display: contents;">
+                            <button id="export-sensitivity-benefits-pdf" type="button" class="btn-secondary" data-toast-message="Sensitivity table exported to a formatted PDF.">
+                                Download sensitivity table (PDF)
+                            </button>
+                        </span>
+                    </span>
                 </div>
+
                 <p class="hint">
                     The export buttons download the sensitivity table exactly as displayed on screen so that results can be pasted
                     directly into concept notes, annexes or World Bank and WHO briefing materials.
@@ -1430,9 +1461,6 @@
                     </tr>
                     </thead>
                     <tbody id="dce-benefits-table-body">
-                    <!-- Filled dynamically from script.js:
-                         - One row per scenario (current configuration and saved scenarios)
-                         - Using selected benefit definition and endorsement assumptions -->
                     </tbody>
                 </table>
             </div>
@@ -1463,9 +1491,6 @@
                     </tr>
                     </thead>
                     <tbody id="sensitivity-table-body">
-                    <!-- Filled dynamically:
-                         - Current configuration
-                         - One row per saved scenario using stored configuration parameters -->
                     </tbody>
                 </table>
             </div>
@@ -1476,6 +1501,34 @@
                 the benefit measure by the endorsement rate for that scenario and are intended for sensitivity analysis
                 rather than for primary cost benefit results.
             </p>
+
+            <!-- Optional PDF-friendly export container (hidden) for scripts that support a dedicated export node -->
+            <div id="pdf-export-sensitivity" style="position:absolute; left:-99999px; top:0; width:980px;" aria-hidden="true">
+                <div style="width:980px;">
+                    <h2 style="margin:0; padding:0;">Sensitivity table</h2>
+                    <p style="margin:6px 0 0 0; padding:0;">
+                        Generated from the current configuration, saved scenarios and the selected value per outbreak for sensitivity.
+                    </p>
+                    <div style="margin-top:10px;">
+                        <table id="pdf-sensitivity-table" class="data-table">
+                            <thead>
+                            <tr>
+                                <th>Scenario</th>
+                                <th>Endorsement</th>
+                                <th>Cost</th>
+                                <th>Total WTP</th>
+                                <th>Epidemiological benefit</th>
+                                <th>BCR</th>
+                                <th>NPV</th>
+                            </tr>
+                            </thead>
+                            <tbody id="pdf-sensitivity-table-body">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </section>
 
@@ -1503,7 +1556,6 @@
             </p>
 
             <div class="copilot-layout">
-                <!-- Left column: narrative instructions, concise with tooltip for detail -->
                 <div class="card card-secondary">
                     <div class="card-header-with-info">
                         <h3>How to use Copilot with STEPS</h3>
@@ -1527,7 +1579,6 @@
                     </div>
                 </div>
 
-                <!-- Right column: button, prompt panel and status -->
                 <div class="card">
                     <h3>Prepare and copy the interpretation prompt</h3>
                     <p class="hint">
@@ -1653,7 +1704,10 @@ Apply a configuration in STEPS and click "Open in Copilot and copy prompt" to ge
 <div id="toast-container"
      class="toast-container"
      aria-live="polite"
-     aria-atomic="true"></div>
+     aria-atomic="true">
+    <!-- Alias element for scripts that target a single toast node -->
+    <div id="toast" class="toast" aria-live="polite" aria-atomic="true"></div>
+</div>
 
 <script src="script.js"></script>
 </body>
