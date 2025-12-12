@@ -98,7 +98,11 @@
                     Users set a programme configuration and see endorsement, WTP, costs and benefit cost ratios,
                     then compare saved scenarios for business case discussions.
                 </p>
-            
+                <p>
+                    The tool supports transparent conversations with the Government of India
+                    and partners by keeping assumptions visible and linking preference study evidence directly to
+                    programme design, economic summaries and epidemiological implications.
+                </p>
             </div>
             <div class="card">
                 <h2>How to use the tool</h2>
@@ -355,7 +359,7 @@
             <div class="card">
                 <h2>Settings and key assumptions</h2>
                 <p>
-                    Use this panel to adjust core multipliers. Changes feed into the Results,
+                    Use this panel to adjust core multipliers for this browser session. Changes feed into the Results,
                     National simulation and WTP-based benefits / Sensitivity tabs.
                 </p>
                 <p class="note">
@@ -479,10 +483,16 @@
 
                     <div class="form-group form-group-wide">
                         <div class="button-row">
-                            <button type="button" id="adv-apply-settings" class="btn-primary">
+                            <button type="button"
+                                    id="adv-apply-settings"
+                                    class="btn-primary"
+                                    data-toast-message="Settings applied for this session and results updated.">
                                 Apply settings
                             </button>
-                            <button type="button" id="adv-reset-settings" class="btn-secondary">
+                            <button type="button"
+                                    id="adv-reset-settings"
+                                    class="btn-secondary"
+                                    data-toast-message="Settings reset to default values for this session.">
                                 Reset to default values
                             </button>
                         </div>
@@ -494,8 +504,12 @@
                     This log records changes made to settings during the current browser session. It can be used to
                     document assumptions for workshops, annexes and discussions with ministries and partners.
                 </p>
-                <div id="adv-settings-log" class="advanced-log-box">
-                    <!-- Populated dynamically by script.js when advanced settings are updated -->
+                <div id="adv-settings-log"
+                     class="advanced-log-box"
+                     aria-live="polite">
+                    <div class="advanced-log-placeholder">
+                        No settings have been applied in this session yet. Once you click Apply settings, a time stamped summary of the inputs will appear here.
+                    </div>
                 </div>
             </div>
 
@@ -756,13 +770,14 @@
                             type="button"
                             data-tour-step="apply"
                             data-tour-title="Apply configuration"
-                            data-tour-content="Click here after you set the configuration. This updates endorsement, costs, indicative benefits and national results.">
+                            data-tour-content="Click here after you set the configuration. This updates endorsement, costs, indicative benefits and national results."
+                            data-toast-message="Configuration applied. Results, costs and benefits updated.">
                         Apply configuration
                     </button>
-                    <button id="open-snapshot" class="btn-secondary" type="button">
+                    <button id="open-snapshot" class="btn-secondary" type="button" data-toast-message="Snapshot opened with a concise results summary.">
                         View results summary
                     </button>
-                    <button id="save-scenario" class="btn-ghost" type="button">
+                    <button id="save-scenario" class="btn-ghost" type="button" data-toast-message="Scenario saved for comparison and export.">
                         Save scenario
                     </button>
                 </div>
@@ -1315,7 +1330,10 @@
                             These options adjust the indicative outbreak cost saving used in combined benefit calculations for this tab.
                         </p>
                         <div class="button-row">
-                            <button id="apply-outbreak-value-btn" type="button" class="btn-secondary">
+                            <button id="apply-outbreak-value-btn"
+                                    type="button"
+                                    class="btn-secondary"
+                                    data-toast-message="Outbreak value for sensitivity updated. Sensitivity tables and charts now use the selected value.">
                                 Apply value
                             </button>
                         </div>
@@ -1365,13 +1383,13 @@
                 </div>
 
                 <div class="button-row">
-                    <button id="refresh-sensitivity-benefits" type="button" class="btn-primary">
+                    <button id="refresh-sensitivity-benefits" type="button" class="btn-primary" data-toast-message="Sensitivity summary refreshed for the current configuration and saved scenarios.">
                         Update sensitivity summary
                     </button>
-                    <button id="export-sensitivity-benefits-excel" type="button" class="btn-secondary">
+                    <button id="export-sensitivity-benefits-excel" type="button" class="btn-secondary" data-toast-message="Sensitivity table exported to Excel.">
                         Download sensitivity table (Excel)
                     </button>
-                    <button id="export-sensitivity-benefits-pdf" type="button" class="btn-secondary">
+                    <button id="export-sensitivity-benefits-pdf" type="button" class="btn-secondary" data-toast-message="Sensitivity table exported to a formatted PDF.">
                         Download sensitivity table (PDF)
                     </button>
                 </div>
@@ -1518,7 +1536,10 @@
                         automatic copying is blocked, you can copy directly from the panel below and paste it into the new Copilot window.
                     </p>
                     <div class="button-row">
-                        <button id="copilot-open-and-copy-btn" type="button" class="btn-primary">
+                        <button id="copilot-open-and-copy-btn"
+                                type="button"
+                                class="btn-primary"
+                                data-toast-message="Copilot interpretation text refreshed. A new browser tab for Microsoft Copilot should now be available.">
                             Open in Copilot and copy prompt
                         </button>
                     </div>
@@ -1585,8 +1606,12 @@ Apply a configuration in STEPS and click "Open in Copilot and copy prompt" to ge
                 other partners. Saved scenarios are also used for downloads.
             </p>
             <div class="button-row">
-                <button id="export-excel" class="btn-secondary" type="button">Download scenarios to Excel</button>
-                <button id="export-pdf" class="btn-secondary" type="button">Download policy brief PDF</button>
+                <button id="export-excel" class="btn-secondary" type="button" data-toast-message="Saved scenarios exported to Excel.">
+                    Download scenarios to Excel
+                </button>
+                <button id="export-pdf" class="btn-secondary" type="button" data-toast-message="Policy brief PDF generated for shortlisted scenarios.">
+                    Download policy brief PDF
+                </button>
             </div>
             <div class="table-wrapper">
                 <table id="scenario-table" class="data-table">
@@ -1623,6 +1648,12 @@ Apply a configuration in STEPS and click "Open in Copilot and copy prompt" to ge
         </div>
     </section>
 </main>
+
+<!-- Toast container for bottom right pop up messages used across the tool -->
+<div id="toast-container"
+     class="toast-container"
+     aria-live="polite"
+     aria-atomic="true"></div>
 
 <script src="script.js"></script>
 </body>
