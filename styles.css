@@ -73,7 +73,8 @@ body[data-theme="worldbank-dark"] .tab-bar {
     background-color: #020617;
 }
 
-body[data-theme="worldbank-dark"] .tab-link.active {
+body[data-theme="worldbank-dark"] .tab-link.active,
+body[data-theme="worldbank-dark"] .tablink.active {
     background-color: #020617;
 }
 
@@ -456,7 +457,10 @@ button:disabled,
     border-radius: 999px 999px 0 0;
 }
 
-.tab-link {
+/* Support both .tab-link (HTML/CSS) and .tablink (existing JS) */
+
+.tab-link,
+.tablink {
     border: none;
     background: transparent;
     padding: 8px 14px;
@@ -477,7 +481,8 @@ button:disabled,
         transform var(--transition-fast);
 }
 
-.tab-link.active {
+.tab-link.active,
+.tablink.active {
     color: var(--color-primary);
     font-weight: 600;
     border-bottom-color: var(--color-primary);
@@ -485,16 +490,21 @@ button:disabled,
     box-shadow: 0 3px 6px rgba(15, 23, 42, 0.10);
 }
 
-.tab-link:hover {
+.tab-link:hover,
+.tablink:hover {
     color: var(--color-primary-hover);
 }
 
-.tab-panel {
+/* Content panels: support both .tab-panel (HTML/CSS) and .tabcontent (existing JS) */
+
+.tab-panel,
+.tabcontent {
     display: none;
     margin-top: 12px;
 }
 
-.tab-panel.active {
+.tab-panel.active,
+.tabcontent.active {
     display: block;
 }
 
