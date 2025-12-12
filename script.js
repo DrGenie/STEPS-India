@@ -209,7 +209,8 @@ const appState = {
     bubbleEl: null,
     arrowEl: null,
     currentTarget: null,
-    hideTimeout: null
+    hideTimeout: null,
+    observer: null
   },
   tour: {
     steps: [],
@@ -267,6 +268,29 @@ function presentValueFactor(rate, years) {
   return (1 - Math.pow(1 + r, -years)) / r;
 }
 
+function setButtonEnabled(btn, enabled) {
+  if (!btn) return;
+  if (enabled) {
+    btn.removeAttribute("disabled");
+    btn.setAttribute("aria-disabled", "false");
+    btn.classList.remove("disabled");
+  } else {
+    btn.setAttribute("disabled", "disabled");
+    btn.setAttribute("aria-disabled", "true");
+    btn.classList.add("disabled");
+  }
+}
+
+function findButtonsByText(regex) {
+  const all = Array.from(document.querySelectorAll("button,input[type='button'],input[type='submit']"));
+  const out = [];
+  all.forEach((el) => {
+    const text = (el.tagName === "INPUT" ? el.value : el.textContent) || "";
+    if (regex.test(text.trim())) out.push(el);
+  });
+  return out;
+}
+
 /* Toasts */
 
 let toastEl = null;
@@ -293,22 +317,11 @@ function showToast(message, type = "info") {
 }
 
 /* ===========================
-   Tooltip system
+   Tooltip system (robust + dynamic)
    =========================== */
 
 function initTooltips() {
-  const icons = $$(".info-icon,[data-tooltip]");
-  if (!icons.length) return;
-
-  icons.forEach((icon) => {
-    const dataTip = icon.getAttribute("data-tooltip");
-    const title = icon.getAttribute("title");
-    if (!dataTip && title) {
-      icon.setAttribute("data-tooltip", title);
-    }
-    icon.removeAttribute("title");
-    if (!icon.hasAttribute("tabindex")) icon.setAttribute("tabindex", "0");
-  });
+  if (appState.tooltip.bubbleEl) return;
 
   const bubble = document.createElement("div");
   bubble.className = "tooltip-bubble tooltip-hidden";
@@ -374,35 +387,70 @@ function initTooltips() {
     bubble.style.visibility = "visible";
   }
 
-  icons.forEach((icon) => {
-    icon.addEventListener("mouseenter", () => {
+  function normaliseTooltipTarget(el) {
+    if (!el || el.nodeType !== 1) return;
+    const dataTip = el.getAttribute("data-tooltip");
+    const title = el.getAttribute("title");
+    if (!dataTip && title) {
+      el.setAttribute("data-tooltip", title);
+    }
+    if (el.hasAttribute("title")) el.removeAttribute("title");
+    if (!el.hasAttribute("tabindex")) el.setAttribute("tabindex", "0");
+  }
+
+  function wireTooltipTarget(el) {
+    if (!el || el.nodeType !== 1) return;
+    if (el.dataset && el.dataset.tooltipWired === "true") return;
+
+    normaliseTooltipTarget(el);
+
+    const text =
+      el.getAttribute("data-tooltip") ||
+      el.getAttribute("aria-label") ||
+      "";
+    if (!text) return;
+
+    el.addEventListener("mouseenter", () => {
       if (appState.tooltip.hideTimeout) clearTimeout(appState.tooltip.hideTimeout);
-      showTooltip(icon);
+      showTooltip(el);
     });
 
-    icon.addEventListener("mouseleave", () => {
+    el.addEventListener("mouseleave", () => {
       appState.tooltip.hideTimeout = setTimeout(hideTooltip, 120);
     });
 
-    icon.addEventListener("focus", () => {
+    el.addEventListener("focus", () => {
       if (appState.tooltip.hideTimeout) clearTimeout(appState.tooltip.hideTimeout);
-      showTooltip(icon);
+      showTooltip(el);
     });
 
-    icon.addEventListener("blur", hideTooltip);
+    el.addEventListener("blur", hideTooltip);
 
-    icon.addEventListener("click", (e) => {
+    el.addEventListener("click", (e) => {
       e.stopPropagation();
-      if (appState.tooltip.currentTarget === icon) hideTooltip();
-      else showTooltip(icon);
+      if (appState.tooltip.currentTarget === el) hideTooltip();
+      else showTooltip(el);
     });
 
-    icon.addEventListener("touchstart", (e) => {
-      e.stopPropagation();
-      if (appState.tooltip.currentTarget === icon) hideTooltip();
-      else showTooltip(icon);
-    }, { passive: true });
-  });
+    el.addEventListener(
+      "touchstart",
+      (e) => {
+        e.stopPropagation();
+        if (appState.tooltip.currentTarget === el) hideTooltip();
+        else showTooltip(el);
+      },
+      { passive: true }
+    );
+
+    if (el.dataset) el.dataset.tooltipWired = "true";
+  }
+
+  function wireAllExistingTargets() {
+    const targets = $$(".info-icon,[data-tooltip]");
+    targets.forEach((t) => wireTooltipTarget(t));
+  }
+
+  wireAllExistingTargets();
 
   window.addEventListener("scroll", () => {
     if (appState.tooltip.currentTarget) positionTooltip(appState.tooltip.currentTarget);
@@ -419,9 +467,61 @@ function initTooltips() {
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") hideTooltip();
   });
+
+  if (!appState.tooltip.observer && window.MutationObserver) {
+    const obs = new MutationObserver((mutations) => {
+      mutations.forEach((m) => {
+        (m.addedNodes || []).forEach((node) => {
+          if (!node || node.nodeType !== 1) return;
+          if (node.matches && (node.matches(".info-icon") || node.hasAttribute("data-tooltip"))) {
+            wireTooltipTarget(node);
+          }
+          const nested = node.querySelectorAll ? node.querySelectorAll(".info-icon,[data-tooltip]") : [];
+          Array.from(nested).forEach((el) => wireTooltipTarget(el));
+        });
+      });
+    });
+    obs.observe(document.body, { childList: true, subtree: true });
+    appState.tooltip.observer = obs;
+  }
 }
 
-/* Definitions for WTP, mixed logit and key sections */
+/* ===========================
+   Definition tooltips (robust attachment)
+   =========================== */
+
+function attachTooltipByIdOrLabel(id, labelNeedle, tooltipText) {
+  const byId = id ? $(id) : null;
+  if (byId) {
+    byId.setAttribute("data-tooltip", tooltipText);
+    return true;
+  }
+
+  if (!labelNeedle) return false;
+
+  const needle = String(labelNeedle).trim().toLowerCase();
+  if (!needle) return false;
+
+  const candidates = Array.from(document.querySelectorAll("span,div,td,th,label,p,strong,h1,h2,h3,h4,h5,h6"));
+  for (let i = 0; i < candidates.length; i++) {
+    const el = candidates[i];
+    const txt = (el.textContent || "").trim().toLowerCase();
+    if (!txt) continue;
+
+    if (txt === needle || txt.includes(needle)) {
+      const info =
+        (el.querySelector && el.querySelector(".info-icon")) ||
+        (el.nextElementSibling && el.nextElementSibling.classList && el.nextElementSibling.classList.contains("info-icon") ? el.nextElementSibling : null) ||
+        (el.parentElement && el.parentElement.querySelector ? el.parentElement.querySelector(".info-icon") : null);
+
+      const target = info || el;
+      target.setAttribute("data-tooltip", tooltipText);
+      if (target.hasAttribute("title")) target.removeAttribute("title");
+      return true;
+    }
+  }
+  return false;
+}
 
 function initDefinitionTooltips() {
   const wtpInfo = $("wtp-info");
@@ -485,181 +585,137 @@ function initDefinitionTooltips() {
       "Define a scenario in the other tabs, then use this Copilot tab to generate a draft policy brief. Copy the prepared prompt into Microsoft Copilot and refine the brief there.";
   }
 
-  const optOutAltInfo = $("optout-alt-info");
-  if (optOutAltInfo && !optOutAltInfo.getAttribute("data-tooltip")) {
-    optOutAltInfo.setAttribute(
-      "data-tooltip",
-      "The opt out alternative represents a situation where no new FETP training is funded under the scenario being considered. STEPS treats this as the benchmark of no new FETP investment when calculating endorsement and opt out rates."
-    );
-  }
+  attachTooltipByIdOrLabel(
+    "optout-alt-info",
+    "Opt out alternative",
+    "The opt out alternative represents a situation where no new FETP training is funded under the scenario being considered. STEPS treats this as the benchmark of no new FETP investment when calculating endorsement and opt out rates."
+  );
 
-  const costComponentsInfo = $("cost-components-info");
-  if (costComponentsInfo && !costComponentsInfo.getAttribute("data-tooltip")) {
-    costComponentsInfo.setAttribute(
-      "data-tooltip",
-      "Cost components group programme expenses for each tier, including salaries and benefits, travel, training inputs, trainee support and indirect items such as opportunity cost. STEPS combines these shares into a single cost per trainee per month for the configuration."
-    );
-  }
+  attachTooltipByIdOrLabel(
+    "cost-components-info",
+    "Cost components",
+    "Cost components group programme expenses for each tier, including salaries and benefits, travel, training inputs, trainee support and indirect items such as opportunity cost. STEPS combines these shares into a single cost per trainee per month for the configuration."
+  );
 
-  const oppCostInfo = $("opp-cost-info");
-  if (oppCostInfo && !oppCostInfo.getAttribute("data-tooltip")) {
-    oppCostInfo.setAttribute(
-      "data-tooltip",
-      "The opportunity cost of trainee time reflects the value of salary time that trainees spend in training instead of normal duties, per trainee per month. If the opportunity cost switch is on, STEPS adds this value to the economic cost of each cohort."
-    );
-  }
+  attachTooltipByIdOrLabel(
+    "opp-cost-info",
+    "Opportunity cost of trainee time",
+    "The opportunity cost of trainee time reflects the value of salary time that trainees spend in training instead of normal duties, per trainee per month. If the opportunity cost switch is on, STEPS adds this value to the economic cost of each cohort."
+  );
 
-  const prefModelInfo = $("preference-model-info");
-  if (prefModelInfo && !prefModelInfo.getAttribute("data-tooltip")) {
-    prefModelInfo.setAttribute(
-      "data-tooltip",
-      "The preference model is a mixed logit estimated from the preference study. It predicts endorsement and opt out shares and provides willingness to pay values that STEPS uses to summarise how much value stakeholders attach to each configuration."
-    );
-  }
+  attachTooltipByIdOrLabel(
+    "preference-model-info",
+    "Preference model",
+    "The preference model is a mixed logit estimated from the preference study. It predicts endorsement and opt out shares and provides willingness to pay values that STEPS uses to summarise how much value stakeholders attach to each configuration."
+  );
 
-  const resEndorseInfo = $("result-endorsement-info");
-  if (resEndorseInfo && !resEndorseInfo.getAttribute("data-tooltip")) {
-    resEndorseInfo.setAttribute(
-      "data-tooltip",
-      "The endorsement rate is the predicted share of decision makers who would choose this FETP configuration rather than the opt out alternative, based on the mixed logit preference model."
-    );
-  }
+  attachTooltipByIdOrLabel(
+    "result-endorsement-info",
+    "Endorsement rate",
+    "The endorsement rate is the predicted share of decision makers who would choose this FETP configuration rather than the opt out alternative, based on the mixed logit preference model."
+  );
 
-  const resOptOutInfo = $("result-optout-info");
-  if (resOptOutInfo && !resOptOutInfo.getAttribute("data-tooltip")) {
-    resOptOutInfo.setAttribute(
-      "data-tooltip",
-      "The opt out rate is the predicted share of decision makers who would prefer not to fund any new FETP training under this configuration. It complements the endorsement rate and always sums to one hundred percent with it."
-    );
-  }
+  attachTooltipByIdOrLabel(
+    "result-optout-info",
+    "Opt out rate",
+    "The opt out rate is the predicted share of decision makers who would prefer not to fund any new FETP training under this configuration. It complements the endorsement rate and always sums to one hundred percent with it."
+  );
 
-  const resWtpTraineeInfo = $("result-wtp-trainee-info");
-  if (resWtpTraineeInfo && !resWtpTraineeInfo.getAttribute("data-tooltip")) {
-    resWtpTraineeInfo.setAttribute(
-      "data-tooltip",
-      "Willingness to pay per trainee per month is calculated by dividing the non cost utility for the configuration by the absolute value of the cost coefficient and multiplying by one thousand. It is an approximate rupee value that stakeholders attach to the training package for each trainee per month."
-    );
-  }
+  attachTooltipByIdOrLabel(
+    "result-wtp-trainee-info",
+    "WTP per trainee",
+    "Willingness to pay per trainee per month is calculated by dividing the non cost utility for the configuration by the absolute value of the cost coefficient and multiplying by one thousand. It is an approximate rupee value that stakeholders attach to the training package for each trainee per month."
+  );
 
-  const resWtpCohortInfo = $("result-wtp-cohort-info");
-  if (resWtpCohortInfo && !resWtpCohortInfo.getAttribute("data-tooltip")) {
-    resWtpCohortInfo.setAttribute(
-      "data-tooltip",
-      "Total willingness to pay per cohort multiplies the willingness to pay per trainee per month by the number of months in the programme and the trainees per cohort. It summarises the indicative value stakeholders attach to one cohort of the chosen configuration."
-    );
-  }
+  attachTooltipByIdOrLabel(
+    "result-wtp-cohort-info",
+    "Total WTP per cohort",
+    "Total willingness to pay per cohort multiplies the willingness to pay per trainee per month by the number of months in the programme and the trainees per cohort. It summarises the indicative value stakeholders attach to one cohort of the chosen configuration."
+  );
 
-  const resProgCostInfo = $("result-prog-cost-info");
-  if (resProgCostInfo && !resProgCostInfo.getAttribute("data-tooltip")) {
-    resProgCostInfo.setAttribute(
-      "data-tooltip",
-      "Programme cost per cohort is the direct financial cost of running one cohort, calculated as the cost per trainee per month times the number of months in the programme and the number of trainees."
-    );
-  }
+  attachTooltipByIdOrLabel(
+    "result-prog-cost-info",
+    "Programme cost per cohort",
+    "Programme cost per cohort is the direct financial cost of running one cohort, calculated as the cost per trainee per month times the number of months in the programme and the number of trainees."
+  );
 
-  const resTotalCostInfo = $("result-total-cost-info");
-  if (resTotalCostInfo && !resTotalCostInfo.getAttribute("data-tooltip")) {
-    resTotalCostInfo.setAttribute(
-      "data-tooltip",
-      "Total economic cost per cohort adds the opportunity cost of trainee time to the programme cost when the opportunity cost switch is on. It is the cost concept used in the benefit cost ratios and net benefits."
-    );
-  }
+  attachTooltipByIdOrLabel(
+    "result-total-cost-info",
+    "Total economic cost per cohort",
+    "Total economic cost per cohort adds the opportunity cost of trainee time to the programme cost when the opportunity cost switch is on. It is the cost concept used in the benefit cost ratios and net benefits."
+  );
 
-  const resNetBenefitInfo = $("result-net-benefit-info");
-  if (resNetBenefitInfo && !resNetBenefitInfo.getAttribute("data-tooltip")) {
-    resNetBenefitInfo.setAttribute(
-      "data-tooltip",
-      "Net outbreak benefit per cohort is the difference between the discounted outbreak related epidemiological benefit and the total economic cost per cohort. Positive values indicate that outbreak benefits exceed costs under the current assumptions."
-    );
-  }
+  attachTooltipByIdOrLabel(
+    "result-net-benefit-info",
+    "Net outbreak benefit per cohort",
+    "Net outbreak benefit per cohort is the difference between the discounted outbreak related epidemiological benefit and the total economic cost per cohort. Positive values indicate that outbreak benefits exceed costs under the current assumptions."
+  );
 
-  const resBcrInfo = $("result-bcr-info");
-  if (resBcrInfo && !resBcrInfo.getAttribute("data-tooltip")) {
-    resBcrInfo.setAttribute(
-      "data-tooltip",
-      "The benefit cost ratio per cohort divides the discounted outbreak benefit per cohort by the total economic cost per cohort. Values above one indicate that estimated benefits exceed costs."
-    );
-  }
+  attachTooltipByIdOrLabel(
+    "result-bcr-info",
+    "Benefit cost ratio",
+    "The benefit cost ratio per cohort divides the discounted outbreak benefit per cohort by the total economic cost per cohort. Values above one indicate that estimated benefits exceed costs."
+  );
 
-  const resEpiGradsInfo = $("result-epi-graduates-info");
-  if (resEpiGradsInfo && !resEpiGradsInfo.getAttribute("data-tooltip")) {
-    resEpiGradsInfo.setAttribute(
-      "data-tooltip",
-      "The number of graduates across all cohorts is based on the trainees per cohort, the completion rate for the chosen tier and the endorsement rate from the preference model. It describes how many additional field epidemiologists complete training under the configuration."
-    );
-  }
+  attachTooltipByIdOrLabel(
+    "result-epi-graduates-info",
+    "Graduates",
+    "The number of graduates across all cohorts is based on the trainees per cohort, the completion rate for the chosen tier and the endorsement rate from the preference model. It describes how many additional field epidemiologists complete training under the configuration."
+  );
 
-  const resEpiOutbreaksInfo = $("result-epi-outbreaks-info");
-  if (resEpiOutbreaksInfo && !resEpiOutbreaksInfo.getAttribute("data-tooltip")) {
-    resEpiOutbreaksInfo.setAttribute(
-      "data-tooltip",
-      "Outbreak responses per year combine the number of graduates with the assumed outbreaks handled per graduate per year and the response time multiplier. Faster response times increase the number of outbreak responses credited to the programme."
-    );
-  }
+  attachTooltipByIdOrLabel(
+    "result-epi-outbreaks-info",
+    "Outbreak responses per year",
+    "Outbreak responses per year combine the number of graduates with the assumed outbreaks handled per graduate per year and the response time multiplier. Faster response times increase the number of outbreak responses credited to the programme."
+  );
 
-  const resEpiBenefitInfo = $("result-epi-benefit-info");
-  if (resEpiBenefitInfo && !resEpiBenefitInfo.getAttribute("data-tooltip")) {
-    resEpiBenefitInfo.setAttribute(
-      "data-tooltip",
-      "The outbreak related epidemiological benefit per cohort converts expected outbreak responses into monetary terms using the value per outbreak and the present value factor implied by the discount rate and planning horizon."
-    );
-  }
+  attachTooltipByIdOrLabel(
+    "result-epi-benefit-info",
+    "Outbreak benefit",
+    "The outbreak related epidemiological benefit per cohort converts expected outbreak responses into monetary terms using the value per outbreak and the present value factor implied by the discount rate and planning horizon."
+  );
 
-  const natTotalCostInfo = $("natsim-total-cost-info");
-  if (natTotalCostInfo && !natTotalCostInfo.getAttribute("data-tooltip")) {
-    natTotalCostInfo.setAttribute(
-      "data-tooltip",
-      "Total economic cost across all cohorts is the economic cost per cohort multiplied by the number of cohorts configured. It is the main cost input to national level benefit cost calculations."
-    );
-  }
+  attachTooltipByIdOrLabel(
+    "natsim-total-cost-info",
+    "Total economic cost",
+    "Total economic cost across all cohorts is the economic cost per cohort multiplied by the number of cohorts configured. It is the main cost input to national level benefit cost calculations."
+  );
 
-  const natTotalBenefitInfo = $("natsim-total-benefit-info");
-  if (natTotalBenefitInfo && !natTotalBenefitInfo.getAttribute("data-tooltip")) {
-    natTotalBenefitInfo.setAttribute(
-      "data-tooltip",
-      "Total outbreak related economic benefit across all cohorts is the discounted outbreak benefit per cohort multiplied by the number of cohorts. It reflects the monetary value attached to outbreak responses over the planning horizon."
-    );
-  }
+  attachTooltipByIdOrLabel(
+    "natsim-total-benefit-info",
+    "Total outbreak related benefit",
+    "Total outbreak related economic benefit across all cohorts is the discounted outbreak benefit per cohort multiplied by the number of cohorts. It reflects the monetary value attached to outbreak responses over the planning horizon."
+  );
 
-  const natNetBenefitInfo = $("natsim-net-benefit-info");
-  if (natNetBenefitInfo && !natNetBenefitInfo.getAttribute("data-tooltip")) {
-    natNetBenefitInfo.setAttribute(
-      "data-tooltip",
-      "Net outbreak related benefit at national level is the difference between total outbreak related benefits and total economic costs across all cohorts. Positive values indicate that the programme is expected to save more in outbreak related costs than it spends."
-    );
-  }
+  attachTooltipByIdOrLabel(
+    "natsim-net-benefit-info",
+    "Net outbreak related benefit",
+    "Net outbreak related benefit at national level is the difference between total outbreak related benefits and total economic costs across all cohorts. Positive values indicate that the programme is expected to save more in outbreak related costs than it spends."
+  );
 
-  const natBcrInfo = $("natsim-bcr-info");
-  if (natBcrInfo && !natBcrInfo.getAttribute("data-tooltip")) {
-    natBcrInfo.setAttribute(
-      "data-tooltip",
-      "The national benefit cost ratio compares total outbreak related benefits with total economic costs across all cohorts. Values above one suggest that the programme generates more outbreak related savings than it costs."
-    );
-  }
+  attachTooltipByIdOrLabel(
+    "natsim-bcr-info",
+    "National benefit cost ratio",
+    "The national benefit cost ratio compares total outbreak related benefits with total economic costs across all cohorts. Values above one suggest that the programme generates more outbreak related savings than it costs."
+  );
 
-  const natGradsInfo = $("natsim-graduates-info");
-  if (natGradsInfo && !natGradsInfo.getAttribute("data-tooltip")) {
-    natGradsInfo.setAttribute(
-      "data-tooltip",
-      "Total graduates over the planning horizon combine the number of cohorts, trainees per cohort, completion rates and endorsement rates. They show the scale of trained field epidemiologists produced under the configuration."
-    );
-  }
+  attachTooltipByIdOrLabel(
+    "natsim-graduates-info",
+    "Total graduates",
+    "Total graduates over the planning horizon combine the number of cohorts, trainees per cohort, completion rates and endorsement rates. They show the scale of trained field epidemiologists produced under the configuration."
+  );
 
-  const natOutbreaksInfo = $("natsim-outbreaks-info");
-  if (natOutbreaksInfo && !natOutbreaksInfo.getAttribute("data-tooltip")) {
-    natOutbreaksInfo.setAttribute(
-      "data-tooltip",
-      "Outbreak responses per year at national level aggregate the expected outbreak responses handled by all graduates across all cohorts, after adjusting for the response time multiplier."
-    );
-  }
+  attachTooltipByIdOrLabel(
+    "natsim-outbreaks-info",
+    "Outbreak responses per year at national level",
+    "Outbreak responses per year at national level aggregate the expected outbreak responses handled by all graduates across all cohorts, after adjusting for the response time multiplier."
+  );
 
-  const natTotalWtpInfo = $("natsim-total-wtp-info");
-  if (natTotalWtpInfo && !natTotalWtpInfo.getAttribute("data-tooltip")) {
-    natTotalWtpInfo.setAttribute(
-      "data-tooltip",
-      "Total willingness to pay across all cohorts multiplies the cohort level willingness to pay by the number of cohorts. It summarises the indicative value stakeholders place on the full scale up configuration."
-    );
-  }
+  attachTooltipByIdOrLabel(
+    "natsim-total-wtp-info",
+    "Total willingness to pay",
+    "Total willingness to pay across all cohorts multiplies the cohort level willingness to pay by the number of cohorts. It summarises the indicative value stakeholders place on the full scale up configuration."
+  );
 }
 
 /* ===========================
@@ -686,6 +742,8 @@ function initTabs() {
       const newHash = `#tab-${tabKey}`;
       if (location.hash !== newHash) history.replaceState(null, "", newHash);
     } catch (e) {}
+
+    initDefinitionTooltips();
   }
 
   tabLinks.forEach((btn) => {
@@ -1181,7 +1239,9 @@ function updateEpiChart(scenario) {
   const existing = appState.charts.epi;
   const data = {
     labels: ["Graduates (all cohorts)", "Outbreak responses per year"],
-    datasets: [{ label: "Epidemiological outputs", data: [scenario.graduatesAllCohorts, scenario.outbreaksPerYearNational] }]
+    datasets: [
+      { label: "Epidemiological outputs", data: [scenario.graduatesAllCohorts, scenario.outbreaksPerYearNational] }
+    ]
   };
   const options = {
     responsive: true,
@@ -1229,7 +1289,9 @@ function updateNatEpiChart(scenario) {
   const existing = appState.charts.natEpi;
   const data = {
     labels: ["Total graduates", "Outbreak responses per year"],
-    datasets: [{ label: "National epidemiological outputs", data: [scenario.graduatesAllCohorts, scenario.outbreaksPerYearNational] }]
+    datasets: [
+      { label: "National epidemiological outputs", data: [scenario.graduatesAllCohorts, scenario.outbreaksPerYearNational] }
+    ]
   };
   const options = {
     responsive: true,
@@ -1512,7 +1574,11 @@ function refreshSavedScenariosTable() {
     const tierLabel = c.tier === "frontline" ? "Frontline" : c.tier === "intermediate" ? "Intermediate" : "Advanced";
     const mentorshipLabel = c.mentorship === "low" ? "Low" : c.mentorship === "medium" ? "Medium" : "High";
     const careerLabel =
-      c.career === "certificate" ? "Certificate" : c.career === "uniqual" ? "University qualification" : "Government career pathway";
+      c.career === "certificate"
+        ? "Certificate"
+        : c.career === "uniqual"
+        ? "University qualification"
+        : "Government career pathway";
 
     tr.innerHTML = `
       <td><input type="checkbox" data-scenario-id="${scenario.id}" /></td>
@@ -1615,42 +1681,64 @@ function exportScenariosToPdf() {
   }
 
   const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ orientation: "landscape" });
+  const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
 
   let y = 10;
+  doc.setFont("helvetica", "bold");
   doc.setFontSize(14);
   doc.text("STEPS FETP India Decision Aid - Saved scenarios", 10, y);
-  y += 8;
-  doc.setFontSize(10);
+  y += 6;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.text(`Generated: ${new Date().toLocaleString()}`, 10, y);
+  y += 6;
 
   appState.savedScenarios.forEach((s, idx) => {
-    if (y > 190) {
+    if (y > 185) {
       doc.addPage();
       y = 10;
     }
     const c = s.config;
+    doc.setFont("helvetica", "bold");
     doc.text(`${idx + 1}. ${c.name || "Scenario"}`, 10, y);
     y += 5;
-    doc.text(`Tier: ${c.tier} | Career: ${c.career} | Mentorship: ${c.mentorship} | Delivery: ${c.delivery} | Response: ${c.response} days`, 10, y);
-    y += 5;
+    doc.setFont("helvetica", "normal");
     doc.text(
-      `Cohorts: ${c.cohorts}, Trainees per cohort: ${c.traineesPerCohort}, Cost per trainee per month (INR): ${formatNumber(c.costPerTraineePerMonth, 0)}`,
+      `Tier: ${c.tier} | Career: ${c.career} | Mentorship: ${c.mentorship} | Delivery: ${c.delivery} | Response: ${c.response} days`,
       10,
       y
     );
     y += 5;
-    doc.text(`Endorsement: ${formatNumber(s.endorseRate, 1)}% | WTP per trainee per month (INR): ${formatNumber(s.wtpPerTraineePerMonth, 0)}`, 10, y);
+    doc.text(
+      `Cohorts: ${c.cohorts}, Trainees per cohort: ${c.traineesPerCohort}, Cost per trainee per month (INR): ${formatNumber(
+        c.costPerTraineePerMonth,
+        0
+      )}`,
+      10,
+      y
+    );
+    y += 5;
+    doc.text(
+      `Endorsement: ${formatNumber(s.endorseRate, 1)}% | WTP per trainee per month (INR): ${formatNumber(s.wtpPerTraineePerMonth, 0)}`,
+      10,
+      y
+    );
     y += 5;
     doc.text(`Total WTP all cohorts (INR): ${formatNumber(s.wtpAllCohorts, 0)}`, 10, y);
     y += 5;
     doc.text(
-      `Total economic cost all cohorts (INR): ${formatNumber(s.natTotalCost, 0)} | Indicative outbreak cost saving (INR): ${formatNumber(s.epiBenefitAllCohorts, 0)}`,
+      `Total economic cost all cohorts (INR): ${formatNumber(s.natTotalCost, 0)} | Indicative outbreak cost saving (INR): ${formatNumber(
+        s.epiBenefitAllCohorts,
+        0
+      )}`,
       10,
       y
     );
     y += 5;
     doc.text(
-      `Net outbreak cost saving (INR): ${formatNumber(s.netBenefitAllCohorts, 0)} | Benefit cost ratio: ${s.natBcr !== null ? formatNumber(s.natBcr, 2) : "-"}`,
+      `Net outbreak cost saving (INR): ${formatNumber(s.netBenefitAllCohorts, 0)} | Benefit cost ratio: ${
+        s.natBcr !== null ? formatNumber(s.natBcr, 2) : "-"
+      }`,
       10,
       y
     );
@@ -1715,7 +1803,7 @@ function refreshSensitivityTables() {
       effectiveWtp = s.wtpAll * (endorsementUsed / 100);
     }
 
-    const combinedBenefit = controls.epiIncluded ? (effectiveWtp + s.epiAll) : effectiveWtp;
+    const combinedBenefit = controls.epiIncluded ? effectiveWtp + s.epiAll : effectiveWtp;
 
     const bcrDceOnly = s.costAll > 0 ? effectiveWtp / s.costAll : null;
     const bcrCombined = s.costAll > 0 ? combinedBenefit / s.costAll : null;
@@ -1754,8 +1842,8 @@ function refreshSensitivityTables() {
       <td class="numeric-cell">${formatCurrencyINR(npvDceOnly / c.cohorts, 0)}</td>
       <td class="numeric-cell">${bcrCombined !== null ? formatNumber(bcrCombined, 2) : "-"}</td>
       <td class="numeric-cell">${formatCurrencyINR(npvCombined / c.cohorts, 0)}</td>
-      <td class="numeric-cell">${formatCurrencyINR((effectiveWtp / c.cohorts), 0)}</td>
-      <td class="numeric-cell">${formatCurrencyINR((combinedBenefit / c.cohorts), 0)}</td>
+      <td class="numeric-cell">${formatCurrencyINR(effectiveWtp / c.cohorts, 0)}</td>
+      <td class="numeric-cell">${formatCurrencyINR(combinedBenefit / c.cohorts, 0)}</td>
     `;
     sensBody.appendChild(trDetail);
   });
@@ -1788,17 +1876,9 @@ function exportSensitivityToPdf() {
     return;
   }
 
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ orientation: "landscape" });
-
-  doc.setFontSize(14);
-  doc.text("STEPS FETP India Decision Aid - WTP based benefits and sensitivity", 10, 10);
-
   const headRow = table.querySelector("thead tr");
   const head = [];
-  if (headRow) {
-    head.push(Array.from(headRow.children).map((th) => th.textContent.trim()));
-  }
+  if (headRow) head.push(Array.from(headRow.children).map((th) => th.textContent.trim()));
 
   const body = [];
   const bodyRows = table.querySelectorAll("tbody tr");
@@ -1807,20 +1887,51 @@ function exportSensitivityToPdf() {
     body.push(row);
   });
 
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+
+  const title = "STEPS FETP India Decision Aid - WTP based benefits and sensitivity";
+  const meta = `Generated: ${new Date().toLocaleString()}`;
+
+  const drawHeader = () => {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(12);
+    doc.text(title, 10, 10);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8.5);
+    doc.text(meta, 10, 15);
+  };
+
+  drawHeader();
+
   if (doc.autoTable && head.length && body.length) {
-    doc.setFontSize(9);
     doc.autoTable({
       head,
       body,
-      startY: 16,
-      styles: { fontSize: 8, cellPadding: 2 },
-      headStyles: { fillColor: [240, 240, 240] },
-      margin: { left: 10, right: 10 },
-      tableWidth: "wrap"
+      startY: 18,
+      theme: "grid",
+      styles: {
+        font: "helvetica",
+        fontSize: 6.8,
+        cellPadding: 1.4,
+        overflow: "linebreak",
+        valign: "top"
+      },
+      headStyles: {
+        fontStyle: "bold"
+      },
+      margin: { left: 8, right: 8 },
+      tableWidth: "auto",
+      horizontalPageBreak: true,
+      pageBreak: "auto",
+      didDrawPage: () => {
+        drawHeader();
+      }
     });
   } else {
-    let y = 18;
-    doc.setFontSize(9);
+    let y = 22;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
     if (head.length) {
       doc.text(head[0].join(" | "), 10, y);
       y += 6;
@@ -1828,13 +1939,15 @@ function exportSensitivityToPdf() {
     body.forEach((row, idx) => {
       if (y > 190) {
         doc.addPage();
-        y = 10;
+        drawHeader();
+        y = 22;
         if (head.length) {
           doc.text(head[0].join(" | "), 10, y);
           y += 6;
         }
       }
-      doc.text(`${idx + 1}. ${row.join(" | ")}`, 10, y);
+      const line = `${idx + 1}. ${row.join(" | ")}`;
+      doc.text(line.substring(0, 250), 10, y);
       y += 5;
     });
   }
@@ -1844,15 +1957,25 @@ function exportSensitivityToPdf() {
 }
 
 /* ===========================
-   Advanced settings
+   Advanced settings and settings log
    =========================== */
 
-function logSettingsMessage(message) {
+function getSettingsLogTargets() {
   const targets = [];
-  const sessionLog = $("settings-log");
-  const advLog = $("adv-settings-log");
-  if (sessionLog) targets.push(sessionLog);
-  if (advLog && advLog !== sessionLog) targets.push(advLog);
+  const ids = ["settings-log", "settings-log-session", "settings-log-box", "adv-settings-log"];
+  ids.forEach((id) => {
+    const el = $(id);
+    if (el && !targets.includes(el)) targets.push(el);
+  });
+  const extra = Array.from(document.querySelectorAll("[data-settings-log],.settings-log,.settings-log-box"));
+  extra.forEach((el) => {
+    if (el && !targets.includes(el)) targets.push(el);
+  });
+  return targets;
+}
+
+function logSettingsMessage(message) {
+  const targets = getSettingsLogTargets();
   if (!targets.length) return;
   const time = new Date().toLocaleString();
   targets.forEach((box) => {
@@ -1874,6 +1997,7 @@ function initAdvancedSettings() {
   const resetBtn = $("adv-reset-settings");
 
   if (applyBtn) {
+    setButtonEnabled(applyBtn, true);
     applyBtn.addEventListener("click", () => {
       if (
         valueGradInput &&
@@ -1914,14 +2038,20 @@ function initAdvancedSettings() {
           const newScenario = computeScenario(appState.currentScenario.config);
           appState.currentScenario = newScenario;
           refreshAllOutputs(newScenario);
+        } else {
+          refreshSensitivityTables();
+          refreshSavedScenariosTable();
         }
 
         showToast("Advanced settings applied for this session.", "success");
+      } else {
+        showToast("Advanced settings inputs are not available on this page.", "warning");
       }
     });
   }
 
   if (resetBtn) {
+    setButtonEnabled(resetBtn, true);
     resetBtn.addEventListener("click", () => {
       appState.epiSettings = JSON.parse(JSON.stringify(DEFAULT_EPI_SETTINGS));
       appState.usdRate = DEFAULT_EPI_SETTINGS.general.inrToUsdRate;
@@ -1940,6 +2070,9 @@ function initAdvancedSettings() {
         const newScenario = computeScenario(appState.currentScenario.config);
         appState.currentScenario = newScenario;
         refreshAllOutputs(newScenario);
+      } else {
+        refreshSensitivityTables();
+        refreshSavedScenariosTable();
       }
 
       showToast("Advanced settings reset to defaults.", "success");
@@ -1947,8 +2080,11 @@ function initAdvancedSettings() {
   }
 }
 
-function applyOutbreakPreset(valueInINR) {
-  if (isNaN(valueInINR) || valueInINR <= 0) return;
+function applyOutbreakPreset(valueInINR, sourceLabel = "sensitivity controls") {
+  if (isNaN(valueInINR) || valueInINR <= 0) {
+    showToast("Select a valid value per outbreak before applying.", "warning");
+    return;
+  }
 
   ["frontline", "intermediate", "advanced"].forEach((tier) => {
     appState.epiSettings.tiers[tier].valuePerOutbreak = valueInINR;
@@ -1961,10 +2097,79 @@ function applyOutbreakPreset(valueInINR) {
     const newScenario = computeScenario(appState.currentScenario.config);
     appState.currentScenario = newScenario;
     refreshAllOutputs(newScenario);
+  } else {
+    refreshSensitivityTables();
+    refreshSavedScenariosTable();
   }
 
-  logSettingsMessage(`Value per outbreak updated to ₹${formatNumber(valueInINR, 0)} per outbreak for all tiers from sensitivity controls.`);
-  showToast(`Value per outbreak set to ₹${formatNumber(valueInINR, 0)} for all tiers.`, "success");
+  logSettingsMessage(`Value per outbreak updated to ₹${formatNumber(valueInINR, 0)} per outbreak for all tiers from ${sourceLabel}.`);
+  showToast(`Value per outbreak applied: ₹${formatNumber(valueInINR, 0)} per outbreak.`, "success");
+}
+
+function wireSettingsApplyButton() {
+  const candidates = [];
+
+  const idCandidates = [
+    "settings-apply",
+    "settings-apply-btn",
+    "apply-settings",
+    "apply-settings-btn",
+    "btn-apply-settings",
+    "settingsApply",
+    "settingsApplyBtn"
+  ];
+  idCandidates.forEach((id) => {
+    const el = $(id);
+    if (el) candidates.push(el);
+  });
+
+  const dataCandidates = [
+    document.querySelector('[data-settings-apply="true"]'),
+    document.querySelector('[data-role="settings-apply"]'),
+    document.querySelector('[data-action="apply-settings"]')
+  ].filter(Boolean);
+  dataCandidates.forEach((el) => candidates.push(el));
+
+  const textCandidates = findButtonsByText(/^apply settings$/i);
+  textCandidates.forEach((el) => candidates.push(el));
+
+  const unique = Array.from(new Set(candidates)).filter(Boolean);
+  if (!unique.length) return null;
+
+  const btn = unique[0];
+  setButtonEnabled(btn, true);
+
+  if (btn.dataset && btn.dataset.wiredSettingsApply === "true") return btn;
+
+  btn.addEventListener("click", () => {
+    const general = appState.epiSettings.general;
+    const aTier = appState.epiSettings.tiers.frontline;
+
+    const msgParts = [];
+    msgParts.push(`Planning horizon set to ${general.planningHorizonYears} years`);
+    msgParts.push(`value per outbreak set to ₹${formatNumber(aTier.valuePerOutbreak, 0)}`);
+    msgParts.push(`completion rate set to ${formatNumber(aTier.completionRate * 100, 1)} percent for all tiers`);
+    msgParts.push(`outbreaks per graduate per year set to ${aTier.outbreaksPerGraduatePerYear}`);
+    msgParts.push(`epidemiological discount rate set to ${formatNumber(general.epiDiscountRate * 100, 1)} percent`);
+    msgParts.push(`INR per USD exchange rate set to ${formatNumber(general.inrToUsdRate, 2)}`);
+
+    const logMessage = msgParts.join("; ") + ".";
+    logSettingsMessage(`Settings applied. ${logMessage}`);
+
+    if (appState.currentScenario) {
+      const scenario = computeScenario(appState.currentScenario.config);
+      appState.currentScenario = scenario;
+      refreshAllOutputs(scenario);
+    } else {
+      refreshSensitivityTables();
+      refreshSavedScenariosTable();
+    }
+
+    showToast("Settings applied for this session.", "success");
+  });
+
+  if (btn.dataset) btn.dataset.wiredSettingsApply = "true";
+  return btn;
 }
 
 /* ===========================
@@ -2159,6 +2364,57 @@ function refreshAllOutputs(scenario) {
   refreshSavedScenariosTable();
 }
 
+function wireOutbreakValueControls() {
+  const selectCandidates = [
+    $("outbreak-value-preset"),
+    $("value-per-outbreak-preset"),
+    $("sensitivity-outbreak-value"),
+    document.querySelector('[data-role="outbreak-value-preset"]'),
+    document.querySelector('select[name="outbreakValuePreset"]')
+  ].filter(Boolean);
+
+  const outbreakPresetSelect = selectCandidates[0] || null;
+
+  const applyCandidates = [
+    $("apply-outbreak-value"),
+    $("apply-value"),
+    $("apply-outbreak"),
+    document.querySelector('[data-role="apply-outbreak-value"]')
+  ].filter(Boolean);
+
+  const applyTextCandidates = findButtonsByText(/^apply value$/i);
+  applyTextCandidates.forEach((b) => applyCandidates.push(b));
+
+  const outbreakApplyBtn = Array.from(new Set(applyCandidates)).filter(Boolean)[0] || null;
+
+  if (outbreakPresetSelect) {
+    outbreakPresetSelect.addEventListener("change", () => {
+      const raw = Number(outbreakPresetSelect.value);
+      if (!isNaN(raw) && raw > 0) {
+        applyOutbreakPreset(raw * 1e9, "the Value per outbreak for sensitivity selector");
+      }
+    });
+  }
+
+  if (outbreakApplyBtn) {
+    setButtonEnabled(outbreakApplyBtn, true);
+
+    if (outbreakApplyBtn.dataset && outbreakApplyBtn.dataset.wiredOutbreakApply === "true") return;
+
+    outbreakApplyBtn.addEventListener("click", () => {
+      if (!outbreakPresetSelect) {
+        showToast("Value per outbreak selector is not available on this page.", "warning");
+        return;
+      }
+      const raw = Number(outbreakPresetSelect.value);
+      if (!isNaN(raw) && raw > 0) applyOutbreakPreset(raw * 1e9, "the Apply value button");
+      else showToast("Select a value per outbreak before applying.", "warning");
+    });
+
+    if (outbreakApplyBtn.dataset) outbreakApplyBtn.dataset.wiredOutbreakApply = "true";
+  }
+}
+
 function initEventHandlers() {
   const costSlider = $("cost-slider");
   if (costSlider) costSlider.addEventListener("input", updateCostSliderLabel);
@@ -2190,6 +2446,7 @@ function initEventHandlers() {
 
   const updateBtn = $("update-results");
   if (updateBtn) {
+    setButtonEnabled(updateBtn, true);
     updateBtn.addEventListener("click", () => {
       enforceResponseFixedTo7();
       const config = getConfigFromForm();
@@ -2200,37 +2457,11 @@ function initEventHandlers() {
     });
   }
 
-  const settingsApplyBtn =
-    $("settings-apply") ||
-    $("settings-apply-btn") ||
-    $("apply-settings") ||
-    document.querySelector('[data-settings-apply="true"]') ||
-    document.querySelector('[data-role="settings-apply"]');
-
-  if (settingsApplyBtn) {
-    settingsApplyBtn.addEventListener("click", () => {
-      if (appState.currentScenario) {
-        const scenario = computeScenario(appState.currentScenario.config);
-        appState.currentScenario = scenario;
-        refreshAllOutputs(scenario);
-      }
-      const general = appState.epiSettings.general;
-      const aTier = appState.epiSettings.tiers.frontline;
-      const msgParts = [];
-      msgParts.push(`Planning horizon set to ${general.planningHorizonYears} years`);
-      msgParts.push(`value per outbreak set to ₹${formatNumber(aTier.valuePerOutbreak, 0)}`);
-      msgParts.push(`completion rate set to ${formatNumber(aTier.completionRate * 100, 1)} percent for all tiers`);
-      msgParts.push(`outbreaks per graduate per year set to ${aTier.outbreaksPerGraduatePerYear}`);
-      msgParts.push(`epidemiological discount rate set to ${formatNumber(general.epiDiscountRate * 100, 1)} percent`);
-      msgParts.push(`INR per USD exchange rate set to ${formatNumber(general.inrToUsdRate, 2)}`);
-      const logMessage = msgParts.join("; ") + ".";
-      logSettingsMessage(`Settings applied. ${logMessage}`);
-      showToast("Settings applied for this session.", "success");
-    });
-  }
+  wireSettingsApplyButton();
 
   const snapshotBtn = $("open-snapshot");
   if (snapshotBtn) {
+    setButtonEnabled(snapshotBtn, true);
     snapshotBtn.addEventListener("click", () => {
       if (!appState.currentScenario) {
         showToast("Apply a configuration before opening the summary.", "warning");
@@ -2242,6 +2473,7 @@ function initEventHandlers() {
 
   const saveScenarioBtn = $("save-scenario");
   if (saveScenarioBtn) {
+    setButtonEnabled(saveScenarioBtn, true);
     saveScenarioBtn.addEventListener("click", () => {
       if (!appState.currentScenario) {
         showToast("Apply a configuration before saving a scenario.", "warning");
@@ -2255,13 +2487,20 @@ function initEventHandlers() {
   }
 
   const exportExcelBtn = $("export-excel");
-  if (exportExcelBtn) exportExcelBtn.addEventListener("click", exportScenariosToExcel);
+  if (exportExcelBtn) {
+    setButtonEnabled(exportExcelBtn, true);
+    exportExcelBtn.addEventListener("click", exportScenariosToExcel);
+  }
 
   const exportPdfBtn = $("export-pdf");
-  if (exportPdfBtn) exportPdfBtn.addEventListener("click", exportScenariosToPdf);
+  if (exportPdfBtn) {
+    setButtonEnabled(exportPdfBtn, true);
+    exportPdfBtn.addEventListener("click", exportScenariosToPdf);
+  }
 
   const sensUpdateBtn = $("refresh-sensitivity-benefits");
   if (sensUpdateBtn) {
+    setButtonEnabled(sensUpdateBtn, true);
     sensUpdateBtn.addEventListener("click", () => {
       if (!appState.currentScenario) {
         showToast("Apply a configuration before updating the sensitivity summary.", "warning");
@@ -2273,10 +2512,16 @@ function initEventHandlers() {
   }
 
   const sensExcelBtn = $("export-sensitivity-benefits-excel");
-  if (sensExcelBtn) sensExcelBtn.addEventListener("click", exportSensitivityToExcel);
+  if (sensExcelBtn) {
+    setButtonEnabled(sensExcelBtn, true);
+    sensExcelBtn.addEventListener("click", exportSensitivityToExcel);
+  }
 
   const sensPdfBtn = $("export-sensitivity-benefits-pdf");
-  if (sensPdfBtn) sensPdfBtn.addEventListener("click", exportSensitivityToPdf);
+  if (sensPdfBtn) {
+    setButtonEnabled(sensPdfBtn, true);
+    sensPdfBtn.addEventListener("click", exportSensitivityToPdf);
+  }
 
   const epiToggle = $("sensitivity-epi-toggle");
   if (epiToggle) {
@@ -2288,22 +2533,7 @@ function initEventHandlers() {
     });
   }
 
-  const outbreakPresetSelect = $("outbreak-value-preset");
-  if (outbreakPresetSelect) {
-    outbreakPresetSelect.addEventListener("change", () => {
-      const raw = Number(outbreakPresetSelect.value);
-      if (!isNaN(raw) && raw > 0) applyOutbreakPreset(raw * 1e9);
-    });
-  }
-
-  const outbreakApplyBtn = $("apply-outbreak-value");
-  if (outbreakApplyBtn && outbreakPresetSelect) {
-    outbreakApplyBtn.addEventListener("click", () => {
-      const raw = Number(outbreakPresetSelect.value);
-      if (!isNaN(raw) && raw > 0) applyOutbreakPreset(raw * 1e9);
-      else showToast("Select a value per outbreak before applying.", "warning");
-    });
-  }
+  wireOutbreakValueControls();
 
   const benefitDefSelect = $("benefit-definition-select");
   if (benefitDefSelect) {
@@ -2347,4 +2577,9 @@ document.addEventListener("DOMContentLoaded", () => {
   enforceResponseFixedTo7();
   updateCostSliderLabel();
   updateCurrencyToggle();
+
+  const settingsBtn = wireSettingsApplyButton();
+  if (settingsBtn) {
+    setButtonEnabled(settingsBtn, true);
+  }
 });
