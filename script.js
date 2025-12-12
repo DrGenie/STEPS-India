@@ -783,21 +783,44 @@ function initDefinitionTooltips() {
    Tabs
    =========================== */
 
+function openTab(tabName) {
+  const tabId = `tab-${tabName}`;
+  const panels = Array.from(document.querySelectorAll(".tab-panel"));
+  const links = Array.from(document.querySelectorAll(".tab-link"));
+
+  panels.forEach((p) => p.classList.remove("active"));
+  links.forEach((l) => l.classList.remove("active"));
+
+  const panel = document.getElementById(tabId);
+  if (panel) {
+    panel.classList.add("active");
+  }
+
+  const btn = document.querySelector(`.tab-link[data-tab="${tabName}"]`);
+  if (btn) {
+    btn.classList.add("active");
+  }
+}
+
 function initTabs() {
   const tabLinks = Array.from(document.querySelectorAll(".tab-link"));
   const panels = Array.from(document.querySelectorAll(".tab-panel"));
+  if (!tabLinks.length || !panels.length) return;
 
   tabLinks.forEach((btn) => {
-    btn.addEventListener("click", () => {
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
       const target = btn.getAttribute("data-tab");
-      tabLinks.forEach((b) => b.classList.remove("active"));
-      panels.forEach((panel) => panel.classList.remove("active"));
-
-      btn.classList.add("active");
-      const panel = document.getElementById(`tab-${target}`);
-      if (panel) panel.classList.add("active");
+      if (!target) return;
+      openTab(target);
     });
   });
+
+  const activeLink =
+    document.querySelector(".tab-link.active") || tabLinks[0];
+  const defaultTab =
+    (activeLink && activeLink.getAttribute("data-tab")) || "intro";
+  openTab(defaultTab);
 }
 
 /* ===========================
@@ -957,6 +980,7 @@ function getConfigFromForm() {
   const mentorship = document.getElementById("mentorship").value;
   const delivery = document.getElementById("delivery").value;
 
+  /* Response time locked at 7 days in this version */
   let response = "7";
   const responseEl = document.getElementById("response");
   if (responseEl) {
@@ -976,7 +1000,9 @@ function getConfigFromForm() {
     document.getElementById("cohorts").value
   );
 
-  const planningInput = document.getElementById("planning-horizon");
+  const planningInput =
+    document.getElementById("planning-horizon-config") ||
+    document.getElementById("planning-horizon");
   let planningHorizonYears =
     appState.epiSettings.general.planningHorizonYears;
   if (planningInput) {
@@ -2359,8 +2385,7 @@ function refreshSensitivityTables() {
         ? combinedBenefit / s.costAll
         : null;
 
-    const npvDceOnly =
-      controls.epiIncluded ? s.npvDceOnly : s.npvDceOnly;
+    const npvDceOnly = s.npvDceOnly;
     const npvCombined = s.npvCombined;
 
     const trHeadline = document.createElement("tr");
@@ -3048,9 +3073,7 @@ function openSnapshotModal(scenario) {
       <p><strong>Delivery mode:</strong> ${
         c.delivery
       }</p>
-      <p><strong>Response time:</strong> ${
-        c.response
-      } days</p>
+      <p><strong>Response time:</strong> 7 days</p>
       <p><strong>Cohorts and trainees:</strong> ${formatNumber(
         c.cohorts,
         0
@@ -3094,6 +3117,22 @@ function openSnapshotModal(scenario) {
     `;
   }
   snapshotModal.classList.remove("hidden");
+}
+
+/* ===========================
+   Response dropdown lock
+   =========================== */
+
+function initResponseDropdownLock() {
+  const select = document.getElementById("response");
+  if (!select) return;
+  select.value = "7";
+  Array.from(select.options).forEach((opt) => {
+    if (opt.value !== "7") {
+      opt.disabled = true;
+      opt.title = "Response time is fixed at 7 days in this version of the tool.";
+    }
+  });
 }
 
 /* ===========================
@@ -3451,6 +3490,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initGuidedTour();
   initAdvancedSettings();
   initCopilot();
+  initResponseDropdownLock();
   initEventHandlers();
   updateCostSliderLabel();
   updateCurrencyToggle();
