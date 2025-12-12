@@ -2,7 +2,7 @@
 {
   "frontline": {
     "Overall": {
-      "label": "Frontline aggregated template (all institutions)",
+      "label": "Frontline aggregated template (all institutionss)",
       "cohortsRepresented": 35,
       "notes": "Frontline FETP total programme costs across all contributing institutions. Amounts are totals and are used to derive cost shares by component and the ratio of indirect and opportunity costs to direct programme costs.",
       "components": [
