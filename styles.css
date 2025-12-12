@@ -49,6 +49,13 @@
     --color-icon-bg: #F3F4F6;
     --color-icon-border: rgba(148, 163, 184, 0.45);
     --color-focus-ring: rgba(37, 99, 235, 0.25);
+
+    /* Optional spacing tokens for compact upgrades (non-breaking) */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
 }
 
 /* Optional dark theme support */
@@ -94,12 +101,22 @@ body[data-theme="worldbank-dark"] .natsim-summary,
 body[data-theme="worldbank-dark"] .sensitivity-controls,
 body[data-theme="worldbank-dark"] .sensitivity-controls-panel,
 body[data-theme="worldbank-dark"] .copilot-actions,
-body[data-theme="worldbank-dark"] .copilot-help-box {
+body[data-theme="worldbank-dark"] .copilot-help-box,
+body[data-theme="worldbank-dark"] .advanced-log-box,
+body[data-theme="worldbank-dark"] .technical-preview,
+body[data-theme="worldbank-dark"] .kpi-card,
+body[data-theme="worldbank-dark"] .cost-config-card,
+body[data-theme="worldbank-dark"] .costing-summary-card {
     background-color: #020617;
     border-color: #1F2937;
 }
 
 body[data-theme="worldbank-dark"] .attr-table-card {
+    background-color: #020617;
+    border-color: #1F2937;
+}
+
+body[data-theme="worldbank-dark"] .attr-icon-item {
     background-color: #020617;
     border-color: #1F2937;
 }
@@ -111,6 +128,25 @@ body[data-theme="worldbank-dark"] .copilot-prompt-panel {
 
 body[data-theme="worldbank-dark"] .copilot-prompt-body {
     background-color: #020617;
+}
+
+body[data-theme="worldbank-dark"] input[type="number"],
+body[data-theme="worldbank-dark"] input[type="text"],
+body[data-theme="worldbank-dark"] textarea,
+body[data-theme="worldbank-dark"] select {
+    background-color: #0B1120;
+    border-color: #1F2937;
+    color: var(--color-text);
+}
+
+body[data-theme="worldbank-dark"] input[readonly],
+body[data-theme="worldbank-dark"] textarea[readonly],
+body[data-theme="worldbank-dark"] input:disabled,
+body[data-theme="worldbank-dark"] select:disabled,
+body[data-theme="worldbank-dark"] textarea:disabled {
+    background-color: #0B1120;
+    color: var(--color-text);
+    opacity: 0.8;
 }
 
 /* Global reset */
@@ -270,6 +306,12 @@ body[data-theme="worldbank-dark"] .app-header {
     background-color: #F9FAFB;
     color: var(--color-text-muted);
     border-color: rgba(148, 163, 184, 0.4);
+}
+
+/* Optional micro-badges inside tabs or headings (non-breaking) */
+.badge-mini {
+    padding: 2px 6px;
+    font-size: 10px;
 }
 
 /* ===========================
@@ -463,6 +505,21 @@ button:disabled,
     border-radius: 999px 999px 0 0;
 }
 
+/* Optional icon inside tab buttons (non-breaking) */
+.tab-link .tab-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 999px;
+    background-color: var(--color-icon-bg);
+    border: 1px solid var(--color-icon-border);
+    color: var(--color-primary);
+    font-size: 11px;
+    font-weight: 700;
+}
+
 .tab-link {
     border: none;
     background: transparent;
@@ -535,6 +592,11 @@ button:disabled,
 
 .card-config {
     position: relative;
+}
+
+/* Optional compact card variant (non-breaking) */
+.card-compact {
+    padding: 14px 16px;
 }
 
 .card-header-with-info {
@@ -750,6 +812,20 @@ ol.plain-list {
     font-size: 13px;
 }
 
+/* Optional compact helper row used when moving detail into tooltips (non-breaking) */
+.helper-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.helper-row .helper-text {
+    color: var(--color-text-muted);
+    font-size: 12px;
+    margin: 0;
+}
+
 /* ===========================
    Forms, inputs and sliders
    =========================== */
@@ -835,6 +911,26 @@ textarea:disabled {
 
 select option:disabled {
     color: #9CA3AF;
+}
+
+/* Optional select wrapper for “fixed but visible” dropdowns (non-breaking) */
+.select-fixed {
+    position: relative;
+}
+
+.select-fixed::after {
+    content: "Fixed";
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    background-color: #F9FAFB;
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    padding: 1px 6px;
+    pointer-events: none;
 }
 
 /* Range slider */
@@ -1059,6 +1155,17 @@ input[type="range"]::-moz-range-thumb {
     display: inline-flex;
     align-items: center;
     gap: 6px;
+}
+
+/* Tooltips in dark theme remain dark, but ensure contrast if body is dark */
+body[data-theme="worldbank-dark"] .tooltip-bubble {
+    background-color: #0B1120;
+    color: #E5E7EB;
+    border: 1px solid #1F2937;
+}
+
+body[data-theme="worldbank-dark"] .tooltip-arrow {
+    background-color: #0B1120;
 }
 
 /* ===========================
@@ -1748,6 +1855,23 @@ canvas {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
+}
+
+/* Compact inline layout helpers (non-breaking) */
+.inline-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+}
+
+.inline-grid.two {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+@media (max-width: 640px) {
+    .inline-grid.two {
+        grid-template-columns: minmax(0, 1fr);
+    }
 }
 
 /* Accessibility helper */
