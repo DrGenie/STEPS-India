@@ -1,4 +1,3 @@
-
 /* ===========================
    Base layout and typography
    =========================== */
@@ -525,6 +524,10 @@ button:disabled,
 .card-secondary {
     background-color: #F9FAFB;
     box-shadow: var(--shadow-soft);
+}
+
+.card-config {
+    position: relative;
 }
 
 .card-header-with-info {
