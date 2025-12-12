@@ -1,0 +1,467 @@
+{
+  "meta": {
+    "name": "STEPS FETP India epidemiological configuration",
+    "version": "1.5",
+    "description": "Default multipliers and indicative monetary values for graduates and outbreak responses used by the STEPS decision aid.",
+    "lastUpdated": "2025-12-12",
+    "author": "Mesfin Genie and collaborators",
+    "notes": "Version 1.5 locks the outbreak response time at 7 days for the core tool configuration while preserving the 15 and 30 day multipliers for sensitivity analysis and backwards compatibility with Versions 1.0 to 1.4.",
+    "backwardsCompatibleWith": [
+      "1.0",
+      "1.1",
+      "1.2",
+      "1.3",
+      "1.4"
+    ],
+    "intendedUse": "These parameters are used to translate DCE derived willingness to pay for FETP programmes into indicative monetary benefits per graduate and per outbreak response over a specified planning horizon.",
+    "documentationUrl": "https://example.org/steps-fetp-india/technical-appendix",
+    "configType": "epidemiological_and_monetary"
+  },
+  "general": {
+    "planningHorizonYears": 5,
+    "inrPerUsd": 83,
+    "discountRateAnnual": 0.03,
+    "applyDiscountingToOutbreakBenefits": false
+  },
+  "time_horizon": {
+    "planning_years": 5,
+    "discount_rate_annual": 0.03,
+    "apply_discounting_to_outbreak_benefits": false
+  },
+  "currency": {
+    "base_currency": "INR",
+    "display_currency_options": [
+      "INR",
+      "USD"
+    ],
+    "inr_per_usd_display": 83,
+    "default_display_currency": "INR"
+  },
+  "tiers": {
+    "frontline": {
+      "label": "Frontline",
+      "durationMonths": 3,
+      "gradRate": 0.9,
+      "gradShare": 0.9,
+      "outbreaksPerCohortPerYear": 0.3,
+      "valuePerGraduate": 0,
+      "valuePerOutbreak": 20000000000,
+      "minGradRate": 0.6,
+      "maxGradRate": 1.0,
+      "minOutbreaksPerCohortPerYear": 0.0,
+      "maxOutbreaksPerCohortPerYear": 2.0,
+      "minValuePerGraduate": 0,
+      "maxValuePerGraduate": 1000000,
+      "minValuePerOutbreak": 10000000000,
+      "maxValuePerOutbreak": 100000000000
+    },
+    "intermediate": {
+      "label": "Intermediate",
+      "durationMonths": 12,
+      "gradRate": 0.9,
+      "gradShare": 0.9,
+      "outbreaksPerCohortPerYear": 0.5,
+      "valuePerGraduate": 0,
+      "valuePerOutbreak": 20000000000,
+      "minGradRate": 0.6,
+      "maxGradRate": 1.0,
+      "minOutbreaksPerCohortPerYear": 0.0,
+      "maxOutbreaksPerCohortPerYear": 2.0,
+      "minValuePerGraduate": 0,
+      "maxValuePerGraduate": 1200000,
+      "minValuePerOutbreak": 10000000000,
+      "maxValuePerOutbreak": 100000000000
+    },
+    "advanced": {
+      "label": "Advanced",
+      "durationMonths": 24,
+      "gradRate": 0.95,
+      "gradShare": 0.95,
+      "outbreaksPerCohortPerYear": 0.8,
+      "valuePerGraduate": 0,
+      "valuePerOutbreak": 20000000000,
+      "minGradRate": 0.7,
+      "maxGradRate": 1.0,
+      "minOutbreaksPerCohortPerYear": 0.0,
+      "maxOutbreaksPerCohortPerYear": 2.0,
+      "minValuePerGraduate": 0,
+      "maxValuePerGraduate": 1500000,
+      "minValuePerOutbreak": 10000000000,
+      "maxValuePerOutbreak": 100000000000
+    }
+  },
+  "epi_multipliers": {
+    "frontline": {
+      "graduates_per_cohort_share": 0.9,
+      "outbreaks_per_cohort_per_year": 0.3,
+      "duration_months": 3
+    },
+    "intermediate": {
+      "graduates_per_cohort_share": 0.9,
+      "outbreaks_per_cohort_per_year": 0.5,
+      "duration_months": 12
+    },
+    "advanced": {
+      "graduates_per_cohort_share": 0.95,
+      "outbreaks_per_cohort_per_year": 0.8,
+      "duration_months": 24
+    }
+  },
+  "values": {
+    "frontline": {
+      "value_per_graduate_inr": 0,
+      "value_per_outbreak_response_inr": 20000000000
+    },
+    "intermediate": {
+      "value_per_graduate_inr": 0,
+      "value_per_outbreak_response_inr": 20000000000
+    },
+    "advanced": {
+      "value_per_graduate_inr": 0,
+      "value_per_outbreak_response_inr": 20000000000
+    }
+  },
+  "response_time_settings": {
+    "unit": "days_from_detection_to_response",
+    "base_response_time_days": 7,
+    "min_response_time_days": 7,
+    "max_response_time_days": 7,
+    "notes": "Core tool configuration locks outbreak response time at 7 days. Multipliers for 15 and 30 days are retained for sensitivity analysis displays and backwards compatibility."
+  },
+  "response_time_multipliers": {
+    "30": 1.0,
+    "15": 1.2,
+    "7": 1.5
+  },
+  "ui_locks": {
+    "lockResponseTimeDays": 7,
+    "showResponseTimeDropdown": true,
+    "disabledResponseTimeOptionsDays": [
+      15,
+      30
+    ],
+    "note": "UI may still render 15 and 30 day options, but they should be disabled and not selectable."
+  },
+  "defaults": {
+    "default_tier": "frontline",
+    "default_model": "mxl",
+    "default_cost_template": "who_frontline_6_cohorts",
+    "default_benefit_definition": "dce_only_overall",
+    "default_benefit_definition_with_epi": "dce_plus_epi_overall",
+    "default_display_currency": "INR",
+    "default_apply_discounting_to_outbreak_benefits": false,
+    "default_epi_scenario": "baseline",
+    "default_value_per_outbreak_inr": 20000000000,
+    "default_response_time_days": 7
+  },
+  "ranges": {
+    "graduates_per_cohort_share": {
+      "min": 0.5,
+      "max": 1.0
+    },
+    "outbreaks_per_cohort_per_year": {
+      "min": 0.0,
+      "max": 10.0
+    },
+    "value_per_graduate_inr": {
+      "min": 0,
+      "max": 1500000
+    },
+    "value_per_outbreak_response_inr": {
+      "min": 10000000000,
+      "max": 100000000000
+    },
+    "planning_years": {
+      "min": 1,
+      "max": 10
+    },
+    "discount_rate_annual": {
+      "min": 0.0,
+      "max": 0.1
+    },
+    "inr_per_usd_display": {
+      "min": 60,
+      "max": 100
+    }
+  },
+  "cost_templates": {
+    "who_frontline_6_cohorts": {
+      "label": "WHO style Frontline programme (6 cohorts over horizon)",
+      "default_tier": "frontline",
+      "default_number_of_cohorts": 6,
+      "notes": "Illustrative template for a multi cohort frontline roll out; cost details are defined in the costing configuration."
+    },
+    "who_intermediate_3_cohorts": {
+      "label": "WHO style Intermediate programme (3 cohorts over horizon)",
+      "default_tier": "intermediate",
+      "default_number_of_cohorts": 3,
+      "notes": "Illustrative template for intermediate FETP roll out."
+    },
+    "who_advanced_2_cohorts": {
+      "label": "WHO style Advanced programme (2 cohorts over horizon)",
+      "default_tier": "advanced",
+      "default_number_of_cohorts": 2,
+      "notes": "Illustrative template for advanced FETP roll out."
+    }
+  },
+  "advanced_defaults": {
+    "graduation_shares": {
+      "frontline": 0.9,
+      "intermediate": 0.9,
+      "advanced": 0.95
+    },
+    "outbreaks_per_cohort_per_year": {
+      "frontline": 0.3,
+      "intermediate": 0.5,
+      "advanced": 0.8
+    },
+    "value_per_graduate_inr": {
+      "frontline": 0,
+      "intermediate": 0,
+      "advanced": 0
+    },
+    "value_per_outbreak_response_inr": {
+      "frontline": 20000000000,
+      "intermediate": 20000000000,
+      "advanced": 20000000000
+    },
+    "planning_years": 5,
+    "discount_rate_annual": 0.03,
+    "inr_per_usd_display": 83,
+    "response_time_days": 7
+  },
+  "ui": {
+    "graduationRate": {
+      "min": 0.6,
+      "max": 1.0,
+      "step": 0.01,
+      "label": "Graduation rate (share of trainees graduating)",
+      "unit": "share",
+      "decimals": 2,
+      "rangeKey": "graduates_per_cohort_share",
+      "group": "epi_core",
+      "helpText": "Proportion of trainees who successfully graduate from each cohort between 0 and 1."
+    },
+    "outbreaksPerCohortPerYear": {
+      "min": 0.0,
+      "max": 2.0,
+      "step": 0.05,
+      "label": "Outbreak responses per cohort per year",
+      "unit": "outbreaks/year",
+      "decimals": 2,
+      "rangeKey": "outbreaks_per_cohort_per_year",
+      "group": "epi_core",
+      "helpText": "Average number of outbreak responses that a cohort contributes to in a typical year."
+    },
+    "valuePerGraduate": {
+      "min": 0,
+      "max": 1500000,
+      "step": 10000,
+      "label": "Non outbreak value per graduate per year (INR)",
+      "unit": "INR",
+      "decimals": 0,
+      "rangeKey": "value_per_graduate_inr",
+      "group": "monetary_values",
+      "helpText": "User defined non outbreak benefit per graduate per year, such as improvements in surveillance or data quality. The core model sets this to zero to avoid overlap with outbreak cost savings; decision makers can turn it on in sensitivity analysis if they wish to add this channel separately."
+    },
+    "valuePerOutbreak": {
+      "min": 10000000000,
+      "max": 100000000000,
+      "step": 1000000000,
+      "label": "Value per outbreak (INR)",
+      "unit": "INR",
+      "decimals": 0,
+      "rangeKey": "value_per_outbreak_response_inr",
+      "group": "monetary_values",
+      "helpText": "Indicative economic cost saving per large outbreak averted or substantially reduced. The core model uses INR 20,000,000,000 as the baseline with sensitivity tests at 10, 20, 50 billion and expert options up to 100 billion."
+    },
+    "planningHorizonYears": {
+      "min": 1,
+      "max": 10,
+      "step": 1,
+      "label": "Planning horizon (years)",
+      "unit": "years",
+      "decimals": 0,
+      "rangeKey": "planning_years",
+      "group": "time_currency",
+      "helpText": "Number of years over which costs and benefits are aggregated."
+    },
+    "inrPerUsd": {
+      "min": 60,
+      "max": 100,
+      "step": 1,
+      "label": "INR per USD (display)",
+      "unit": "INR/USD",
+      "decimals": 0,
+      "rangeKey": "inr_per_usd_display",
+      "group": "time_currency",
+      "helpText": "Exchange rate used for displaying values in USD where required."
+    },
+    "discountRateAnnual": {
+      "min": 0.0,
+      "max": 0.1,
+      "step": 0.005,
+      "label": "Annual discount rate",
+      "unit": "rate",
+      "decimals": 3,
+      "rangeKey": "discount_rate_annual",
+      "group": "time_currency",
+      "helpText": "Annual discount rate applied to future costs and benefits, for example 0.03 for 3 percent."
+    }
+  },
+  "scenarios": {
+    "baseline": {
+      "label": "Baseline (default)",
+      "description": "Default configuration matching the core values used in the STEPS technical appendix, with zero non outbreak benefit per graduate and INR 20,000,000,000 per large outbreak averted or substantially reduced.",
+      "multipliers": {
+        "frontline": {
+          "valuePerGraduateMultiplier": 1.0,
+          "valuePerOutbreakMultiplier": 1.0
+        },
+        "intermediate": {
+          "valuePerGraduateMultiplier": 1.0,
+          "valuePerOutbreakMultiplier": 1.0
+        },
+        "advanced": {
+          "valuePerGraduateMultiplier": 1.0,
+          "valuePerOutbreakMultiplier": 1.0
+        }
+      },
+      "inheritsFromDefaults": true,
+      "overrideTimeHorizon": null,
+      "overrideDiscountRateAnnual": null
+    },
+    "conservative": {
+      "label": "Conservative benefits",
+      "description": "Reduces monetary benefits by 25 percent for all tiers, holding graduation rates and outbreaks per cohort fixed.",
+      "multipliers": {
+        "frontline": {
+          "valuePerGraduateMultiplier": 0.75,
+          "valuePerOutbreakMultiplier": 0.75
+        },
+        "intermediate": {
+          "valuePerGraduateMultiplier": 0.75,
+          "valuePerOutbreakMultiplier": 0.75
+        },
+        "advanced": {
+          "valuePerGraduateMultiplier": 0.75,
+          "valuePerOutbreakMultiplier": 0.75
+        }
+      },
+      "inheritsFromDefaults": true,
+      "overrideTimeHorizon": null,
+      "overrideDiscountRateAnnual": null
+    },
+    "highImpact": {
+      "label": "High impact benefits",
+      "description": "Increases monetary benefits by 25 percent for all tiers, holding graduation rates and outbreaks per cohort fixed.",
+      "multipliers": {
+        "frontline": {
+          "valuePerGraduateMultiplier": 1.25,
+          "valuePerOutbreakMultiplier": 1.25
+        },
+        "intermediate": {
+          "valuePerGraduateMultiplier": 1.25,
+          "valuePerOutbreakMultiplier": 1.25
+        },
+        "advanced": {
+          "valuePerGraduateMultiplier": 1.25,
+          "valuePerOutbreakMultiplier": 1.25
+        }
+      },
+      "inheritsFromDefaults": true,
+      "overrideTimeHorizon": null,
+      "overrideDiscountRateAnnual": null
+    }
+  },
+  "field_mappings": {
+    "uiToConfig": {
+      "graduationRate": "tiers[*].gradRate",
+      "outbreaksPerCohortPerYear": "tiers[*].outbreaksPerCohortPerYear",
+      "valuePerGraduate": "tiers[*].valuePerGraduate",
+      "valuePerOutbreak": "tiers[*].valuePerOutbreak",
+      "planningHorizonYears": "time_horizon.planning_years",
+      "discountRateAnnual": "time_horizon.discount_rate_annual",
+      "inrPerUsd": "currency.inr_per_usd_display"
+    },
+    "tierAliases": {
+      "frontline": "frontline",
+      "intermediate": "intermediate",
+      "advanced": "advanced"
+    }
+  },
+  "ui_layout": {
+    "sections": [
+      {
+        "id": "epi_core",
+        "label": "Epidemiological core parameters",
+        "fields": [
+          "graduationRate",
+          "outbreaksPerCohortPerYear"
+        ]
+      },
+      {
+        "id": "monetary_values",
+        "label": "Monetary benefit assumptions",
+        "fields": [
+          "valuePerGraduate",
+          "valuePerOutbreak"
+        ]
+      },
+      {
+        "id": "time_currency",
+        "label": "Time horizon and currency",
+        "fields": [
+          "planningHorizonYears",
+          "discountRateAnnual",
+          "inrPerUsd"
+        ]
+      }
+    ],
+    "scenarioSelector": {
+      "enabled": true,
+      "defaultScenarioKey": "baseline"
+    }
+  },
+  "schema": {
+    "planningHorizonYears": {
+      "type": "number",
+      "min": 1,
+      "max": 10,
+      "description": "Length of the planning horizon in years."
+    },
+    "discountRateAnnual": {
+      "type": "number",
+      "min": 0.0,
+      "max": 0.1,
+      "description": "Annual discount rate applied to future flows."
+    },
+    "inrPerUsd": {
+      "type": "number",
+      "min": 60,
+      "max": 100,
+      "description": "Exchange rate used for display conversions."
+    },
+    "tier": {
+      "type": "string",
+      "enum": [
+        "frontline",
+        "intermediate",
+        "advanced"
+      ],
+      "description": "FETP programme tier."
+    },
+    "response_time_multipliers": {
+      "type": "object",
+      "description": "Mapping from response time in days 7, 15, 30 to relative outbreak response benefit multipliers used in DCE based sensitivity analysis."
+    },
+    "response_time_settings": {
+      "type": "object",
+      "description": "Metadata and bounds for outbreak response times used when linking response time to benefits."
+    },
+    "ui_locks": {
+      "type": "object",
+      "description": "Optional UI constraints used by the tool to lock or disable response time options."
+    }
+  }
+}
