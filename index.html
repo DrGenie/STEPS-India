@@ -15,7 +15,10 @@
     <!-- SheetJS for Excel export -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
+
 <body data-theme="worldbank-light">
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
 <header class="app-header"
         data-tour-step="header"
         data-tour-title="STEPS header and branding"
@@ -36,6 +39,7 @@
     <div class="app-header-right">
         <span class="badge badge-primary">Policy decision aid</span>
         <span class="badge badge-outline">Version 1.0</span>
+
         <button id="btn-start-tour"
                 class="btn-ghost-small tour-trigger"
                 type="button"
@@ -48,8 +52,10 @@
             <span class="tour-icon">?</span>
             Quick tour
         </button>
+
         <a href="technical-appendix.html"
            target="_blank"
+           rel="noopener"
            class="btn-link-small"
            data-tour-step="tech-appendix-link"
            data-tour-title="Technical appendix"
@@ -59,26 +65,29 @@
     </div>
 </header>
 
-<main class="app-shell">
+<main id="main-content" class="app-shell">
     <!-- TAB BAR -->
     <nav class="tab-bar"
+         role="tablist"
+         aria-label="STEPS tabs"
          data-tour-step="tabs"
          data-tour-title="Navigation tabs"
          data-tour-content="Use these tabs to move between configuration, results, costing, national simulation, WTP-based benefits and sensitivity, Copilot briefing, saved scenarios and settings.">
-        <button class="tablink active" data-tab="aboutTab" type="button">Introduction</button>
-        <button class="tablink" data-tab="attributesTab" type="button">Attributes and levels</button>
-        <button class="tablink" data-tab="settingsTab" type="button">Settings</button>
-        <button class="tablink" data-tab="configTab" type="button">Configuration</button>
-        <button class="tablink" data-tab="resultsTab" type="button">Results</button>
-        <button class="tablink" data-tab="costingTab" type="button">Costing details</button>
-        <button class="tablink" data-tab="natsimTab" type="button">National simulation</button>
-        <button class="tablink" data-tab="sensitivityTab" type="button">WTP-based benefits / Sensitivity</button>
-        <button class="tablink" data-tab="copilotTab" type="button">Copilot briefing</button>
-        <button class="tablink" data-tab="scenariosTab" type="button">Saved scenarios</button>
+        <button class="tablink active" role="tab" aria-selected="true" aria-controls="aboutTab" data-tab="aboutTab" type="button">Introduction</button>
+        <button class="tablink" role="tab" aria-selected="false" aria-controls="attributesTab" data-tab="attributesTab" type="button">Attributes and levels</button>
+        <button class="tablink" role="tab" aria-selected="false" aria-controls="settingsTab" data-tab="settingsTab" type="button">Settings</button>
+        <button class="tablink" role="tab" aria-selected="false" aria-controls="configTab" data-tab="configTab" type="button">Configuration</button>
+        <button class="tablink" role="tab" aria-selected="false" aria-controls="resultsTab" data-tab="resultsTab" type="button">Results</button>
+        <button class="tablink" role="tab" aria-selected="false" aria-controls="costingTab" data-tab="costingTab" type="button">Costing details</button>
+        <button class="tablink" role="tab" aria-selected="false" aria-controls="natsimTab" data-tab="natsimTab" type="button">National simulation</button>
+        <button class="tablink" role="tab" aria-selected="false" aria-controls="sensitivityTab" data-tab="sensitivityTab" type="button">WTP-based benefits / Sensitivity</button>
+        <button class="tablink" role="tab" aria-selected="false" aria-controls="copilotTab" data-tab="copilotTab" type="button">Copilot briefing</button>
+        <button class="tablink" role="tab" aria-selected="false" aria-controls="scenariosTab" data-tab="scenariosTab" type="button">Saved scenarios</button>
     </nav>
 
     <!-- INTRO TAB -->
-    <section id="aboutTab" class="tabcontent">
+    <!-- Fallback: keep the introduction visible even if JS fails early -->
+    <section id="aboutTab" class="tabcontent" role="tabpanel" aria-labelledby="Introduction" style="display:block;">
         <div class="grid-two"
              data-tour-step="intro"
              data-tour-title="Welcome to STEPS"
@@ -124,7 +133,7 @@
     </section>
 
     <!-- ATTRIBUTES TAB -->
-    <section id="attributesTab" class="tabcontent">
+    <section id="attributesTab" class="tabcontent" role="tabpanel" aria-labelledby="Attributes and levels">
         <div class="card"
              data-tour-step="attributes"
              data-tour-title="Attributes and levels"
@@ -346,7 +355,7 @@
     </section>
 
     <!-- SETTINGS TAB (combined About + Advanced) -->
-    <section id="settingsTab" class="tabcontent">
+    <section id="settingsTab" class="tabcontent" role="tabpanel" aria-labelledby="Settings">
         <div class="grid-two-stretch"
              data-tour-step="settings"
              data-tour-title="Settings and assumptions"
@@ -362,6 +371,7 @@
                     indicative value per outbreak, the planning horizon used in benefit calculations and the INR per USD rate for display.
                     The technical appendix explains how WTP from the preference study and epidemiological outputs are combined in benefit cost ratios.
                 </p>
+
                 <form id="advanced-settings-form" class="form-grid">
                     <div class="form-group">
                         <label for="adv-non-outbreak-value-per-graduate">
@@ -370,9 +380,7 @@
                                     class="info-icon"
                                     aria-label="Non outbreak value per graduate information"
                                     data-tooltip="Optional user defined approximate annual value per graduate from non outbreak improvements, such as better surveillance, data quality or training others. Default is zero and this channel is excluded from core benefit cost ratios unless explicitly activated in analysis."
-                                    title="Non outbreak value per graduate information">
-                                i
-                            </button>
+                                    title="Non outbreak value per graduate information">i</button>
                         </label>
                         <input type="number" id="adv-non-outbreak-value-per-graduate" min="0" step="10000" value="0">
                     </div>
@@ -384,9 +392,7 @@
                                     class="info-icon"
                                     aria-label="Value per outbreak information"
                                     data-tooltip="Indicative monetary cost saving used for each large outbreak averted or substantially reduced in the core epidemiological benefit calculation. Default is ₹20 billion, based on published outbreak cost estimates converted to rupees. Sensitivity analysis can explore lower and higher values, including severe pandemic scenarios."
-                                    title="Value per outbreak information">
-                                i
-                            </button>
+                                    title="Value per outbreak information">i</button>
                         </label>
                         <input type="number" id="adv-value-per-outbreak" min="0" step="1000000000" value="20000000000">
                     </div>
@@ -398,9 +404,7 @@
                                     class="info-icon"
                                     aria-label="Completion rate information"
                                     data-tooltip="Share of enrolled trainees expected to complete the programme and become graduates. This drives graduate numbers in the epidemiological module."
-                                    title="Completion rate information">
-                                i
-                            </button>
+                                    title="Completion rate information">i</button>
                         </label>
                         <input type="number" id="adv-completion-rate" min="0" max="100" step="1" value="90">
                     </div>
@@ -412,9 +416,7 @@
                                     class="info-icon"
                                     aria-label="Outbreaks per graduate information"
                                     data-tooltip="Average number of outbreak responses that one graduate is expected to contribute to per year under the chosen assumptions."
-                                    title="Outbreaks per graduate information">
-                                i
-                            </button>
+                                    title="Outbreaks per graduate information">i</button>
                         </label>
                         <input type="number" id="adv-outbreaks-per-graduate" min="0" step="0.1" value="0.5">
                     </div>
@@ -426,9 +428,7 @@
                                     class="info-icon"
                                     aria-label="Planning horizon information"
                                     data-tooltip="Number of years over which approximate epidemiological and WTP benefits are summarised for benefit cost ratios and net present value calculations."
-                                    title="Planning horizon information">
-                                i
-                            </button>
+                                    title="Planning horizon information">i</button>
                         </label>
                         <input type="number" id="adv-planning-horizon" min="1" max="30" step="1" value="5">
                     </div>
@@ -440,9 +440,7 @@
                                     class="info-icon"
                                     aria-label="Benefit discount rate information"
                                     data-tooltip="Annual discount rate used when summarising future epidemiological benefits in present value terms."
-                                    title="Benefit discount rate information">
-                                i
-                            </button>
+                                    title="Benefit discount rate information">i</button>
                         </label>
                         <input type="number" id="adv-epi-discount-rate" min="0" max="20" step="0.5" value="3">
                     </div>
@@ -454,9 +452,7 @@
                                     class="info-icon"
                                     aria-label="Exchange rate information"
                                     data-tooltip="INR per USD rate used for display purposes when switching the currency toggle. Core calculations remain in INR."
-                                    title="Exchange rate information">
-                                i
-                            </button>
+                                    title="Exchange rate information">i</button>
                         </label>
                         <input type="number" id="adv-usd-rate" min="60" max="100" step="1" value="83">
                     </div>
@@ -468,9 +464,7 @@
                                     class="info-icon"
                                     aria-label="Settings notes information"
                                     data-tooltip="Optional notes describing changes to settings for documentation in workshops or technical annexes."
-                                    title="Settings notes information">
-                                i
-                            </button>
+                                    title="Settings notes information">i</button>
                         </label>
                         <textarea id="adv-notes" rows="3"
                                   placeholder="Optional notes on the assumptions used in this session."></textarea>
@@ -478,15 +472,11 @@
 
                     <div class="form-group form-group-wide">
                         <div class="button-row">
-                            <button type="button"
-                                    id="adv-apply-settings"
-                                    class="btn-primary"
+                            <button type="button" id="adv-apply-settings" class="btn-primary"
                                     data-toast-message="Settings applied for this session and results updated.">
                                 Apply settings
                             </button>
-                            <button type="button"
-                                    id="adv-reset-settings"
-                                    class="btn-secondary"
+                            <button type="button" id="adv-reset-settings" class="btn-secondary"
                                     data-toast-message="Settings reset to default values for this session.">
                                 Reset to default values
                             </button>
@@ -499,9 +489,7 @@
                     This log records changes made to settings during the current browser session. It can be used to
                     document assumptions for workshops, annexes and discussions with ministries and partners.
                 </p>
-                <div id="adv-settings-log"
-                     class="advanced-log-box"
-                     aria-live="polite">
+                <div id="adv-settings-log" class="advanced-log-box" aria-live="polite">
                     <div class="advanced-log-placeholder">
                         No settings have been applied in this session yet. Once you click Apply settings, a time stamped summary of the inputs will appear here.
                     </div>
@@ -534,7 +522,7 @@
                 </p>
                 <p class="note">
                     For full details, including model specification, estimation outputs, formulae and worked examples, refer to the technical appendix.
-                    <a href="technical-appendix.html" target="_blank">Open the technical appendix</a> in a new tab.
+                    <a href="technical-appendix.html" target="_blank" rel="noopener">Open the technical appendix</a> in a new tab.
                 </p>
                 <p class="note">
                     Prepared by <strong>Mesfin Genie, PhD</strong>, Newcastle Business School, The University of
@@ -546,7 +534,7 @@
     </section>
 
     <!-- CONFIG TAB -->
-    <section id="configTab" class="tabcontent">
+    <section id="configTab" class="tabcontent" role="tabpanel" aria-labelledby="Configuration">
         <div class="grid-two-stretch"
              data-tour-step="config"
              data-tour-title="Configure a scenario"
@@ -662,9 +650,7 @@
                                     aria-label="Trainees per cohort information">i</button>
                         </label>
                         <input type="number" id="trainees" min="5" max="80" value="35">
-                        <p class="hint">
-                            Use this to test different cohort sizes.
-                        </p>
+                        <p class="hint">Use this to test different cohort sizes.</p>
                     </div>
 
                     <div class="form-group">
@@ -677,9 +663,7 @@
                                     aria-label="Number of cohorts information">i</button>
                         </label>
                         <input type="number" id="cohorts" min="1" max="200" value="10">
-                        <p class="hint">
-                            Increase this to explore national scale up.
-                        </p>
+                        <p class="hint">Increase this to explore national scale up.</p>
                     </div>
 
                     <div class="form-group">
@@ -692,9 +676,7 @@
                                     aria-label="Planning horizon configuration information">i</button>
                         </label>
                         <input type="number" id="planning-horizon-config" min="1" max="30" value="5">
-                        <p class="hint">
-                            Keep this aligned with the planning horizon in the Settings tab.
-                        </p>
+                        <p class="hint">Keep this aligned with the planning horizon in the Settings tab.</p>
                     </div>
 
                     <div class="form-group">
@@ -716,12 +698,8 @@
                                     aria-label="Currency display information">i</button>
                         </label>
                         <div class="pill-toggle-group">
-                            <button type="button" class="pill-toggle active" data-currency="INR">
-                                INR (calculations)
-                            </button>
-                            <button type="button" class="pill-toggle" data-currency="USD">
-                                Approximate USD
-                            </button>
+                            <button type="button" class="pill-toggle active" data-currency="INR">INR (calculations)</button>
+                            <button type="button" class="pill-toggle" data-currency="USD">Approximate USD</button>
                         </div>
                         <p class="hint">
                             All calculations are in INR. USD values use a simple exchange rate for display only and can
@@ -742,9 +720,7 @@
                             <span class="switch-knob"></span>
                             <span class="switch-label">Opportunity cost included</span>
                         </button>
-                        <p class="hint">
-                            Where the cost configuration has opportunity cost, this adds it to economic costs.
-                        </p>
+                        <p class="hint">Where the cost configuration has opportunity cost, this adds it to economic costs.</p>
                     </div>
 
                     <div class="form-group form-group-wide">
@@ -760,19 +736,19 @@
                 </div>
 
                 <div class="button-row button-row-main">
-                    <button id="update-results"
-                            class="btn-primary"
-                            type="button"
+                    <button id="update-results" class="btn-primary" type="button"
                             data-tour-step="apply"
                             data-tour-title="Apply configuration"
                             data-tour-content="Click here after you set the configuration. This updates endorsement, costs, indicative benefits and national results."
                             data-toast-message="Configuration applied. Results, costs and benefits updated.">
                         Apply configuration
                     </button>
-                    <button id="open-snapshot" class="btn-secondary" type="button" data-toast-message="Snapshot opened with a concise results summary.">
+                    <button id="open-snapshot" class="btn-secondary" type="button"
+                            data-toast-message="Snapshot opened with a concise results summary.">
                         View results summary
                     </button>
-                    <button id="save-scenario" class="btn-ghost" type="button" data-toast-message="Scenario saved for comparison and export.">
+                    <button id="save-scenario" class="btn-ghost" type="button"
+                            data-toast-message="Scenario saved for comparison and export.">
                         Save scenario
                     </button>
                 </div>
@@ -790,9 +766,7 @@
                             title="Current configuration information"
                             aria-label="Current configuration information">i</button>
                 </div>
-                <div id="config-summary" class="config-summary">
-                    <!-- Filled dynamically -->
-                </div>
+                <div id="config-summary" class="config-summary"></div>
                 <hr class="divider">
                 <div class="config-endorsement-row">
                     <div class="config-endorsement-label">
@@ -824,7 +798,9 @@
     </section>
 
     <!-- RESULTS TAB -->
-    <section id="resultsTab" class="tabcontent">
+    <section id="resultsTab" class="tabcontent" role="tabpanel" aria-labelledby="Results">
+        <!-- (unchanged content from your original file) -->
+        <!-- Kept as-is to preserve layout and IDs -->
         <div class="results-grid"
              data-tour-step="results"
              data-tour-title="Results and interpretation"
@@ -1036,7 +1012,8 @@
     </section>
 
     <!-- COSTING TAB -->
-    <section id="costingTab" class="tabcontent">
+    <section id="costingTab" class="tabcontent" role="tabpanel" aria-labelledby="Costing details">
+        <!-- unchanged content -->
         <div class="grid-two-stretch costing-layout"
              data-tour-step="costing"
              data-tour-title="Costing details"
@@ -1083,9 +1060,7 @@
                             title="Cost components information"
                             aria-label="Cost components information">i</button>
                 </div>
-                <div id="cost-breakdown-summary" class="cost-summary">
-                    <!-- Filled dynamically with total programme cost, shares and opportunity cost contribution -->
-                </div>
+                <div id="cost-breakdown-summary" class="cost-summary"></div>
                 <div class="table-wrapper">
                     <table class="data-table" id="cost-components-table">
                         <thead>
@@ -1097,9 +1072,7 @@
                             <th>Notes</th>
                         </tr>
                         </thead>
-                        <tbody id="cost-components-list">
-                        <!-- Filled dynamically based on combined cost configuration and cohort size -->
-                        </tbody>
+                        <tbody id="cost-components-list"></tbody>
                     </table>
                 </div>
             </div>
@@ -1107,7 +1080,8 @@
     </section>
 
     <!-- NATIONAL SIMULATION TAB -->
-    <section id="natsimTab" class="tabcontent">
+    <section id="natsimTab" class="tabcontent" role="tabpanel" aria-labelledby="National simulation">
+        <!-- unchanged content -->
         <div class="card"
              data-tour-step="natsim"
              data-tour-title="National simulation"
@@ -1249,11 +1223,19 @@
     </section>
 
     <!-- WTP-BASED BENEFITS / SENSITIVITY TAB -->
-    <section id="sensitivityTab" class="tabcontent">
+    <section id="sensitivityTab" class="tabcontent" role="tabpanel" aria-labelledby="WTP-based benefits / Sensitivity">
+        <!-- unchanged content -->
+        <!-- (your full sensitivity tab content remains exactly as provided) -->
+        <!-- Kept to preserve all IDs and script bindings -->
+        <!-- START sensitivity content -->
+        <!-- (content unchanged; omitted here only in this comment line, not removed) -->
         <div class="card"
              data-tour-step="sensitivity"
              data-tour-title="WTP-based benefits and sensitivity"
              data-tour-content="This tab summarises programme costs, WTP-based benefits from the preference study and outbreak related epidemiological benefits for the current configuration and any saved scenarios, and reports cost benefit metrics including benefit cost ratios and net present values.">
+            <!-- (the rest of your sensitivityTab HTML is unchanged) -->
+            <!-- For brevity in this output: it is included in full below exactly as you provided -->
+            <!-- BEGIN original sensitivityTab block -->
             <div class="card-header-with-info">
                 <h2>WTP-based benefits and sensitivity summary</h2>
                 <button type="button"
@@ -1276,7 +1258,7 @@
                 Full formulas and worked numerical examples are set out in the technical appendix, including how
                 WTP is constructed from the preference study and how outbreak related
                 epidemiological benefits are linked to response time and the value per outbreak setting.
-                <a href="technical-appendix.html" target="_blank">See the technical appendix for full formulas and worked examples.</a>
+                <a href="technical-appendix.html" target="_blank" rel="noopener">See the technical appendix for full formulas and worked examples.</a>
             </p>
 
             <div class="card card-secondary sensitivity-controls-panel">
@@ -1424,11 +1406,7 @@
                         <th>Net present value (WTP plus epidemiological benefit, INR)</th>
                     </tr>
                     </thead>
-                    <tbody id="dce-benefits-table-body">
-                    <!-- Filled dynamically from script.js:
-                         - One row per scenario (current configuration and saved scenarios)
-                         - Using selected benefit definition and endorsement assumptions -->
-                    </tbody>
+                    <tbody id="dce-benefits-table-body"></tbody>
                 </table>
             </div>
 
@@ -1457,11 +1435,7 @@
                         <th>Effective combined benefit per cohort (INR)</th>
                     </tr>
                     </thead>
-                    <tbody id="sensitivity-table-body">
-                    <!-- Filled dynamically:
-                         - Current configuration
-                         - One row per saved scenario using stored configuration parameters -->
-                    </tbody>
+                    <tbody id="sensitivity-table-body"></tbody>
                 </table>
             </div>
 
@@ -1471,11 +1445,14 @@
                 the benefit measure by the endorsement rate for that scenario and are intended for sensitivity analysis
                 rather than for primary cost benefit results.
             </p>
+            <!-- END original sensitivityTab block -->
         </div>
+        <!-- END sensitivity content -->
     </section>
 
     <!-- COPILOT TAB -->
-    <section id="copilotTab" class="tabcontent">
+    <section id="copilotTab" class="tabcontent" role="tabpanel" aria-labelledby="Copilot briefing">
+        <!-- unchanged content -->
         <div class="card"
              data-tour-step="copilot"
              data-tour-title="Copilot briefing and interpretation package"
@@ -1486,9 +1463,7 @@
                         class="info-icon"
                         aria-label="Copilot briefing information"
                         data-tooltip="Use this tab after running your STEPS analysis. It prepares a ready to paste text block that combines a policy interpretation prompt with the current scenario JSON. You can copy this text and paste it into Microsoft Copilot to obtain a structured policy briefing."
-                        title="Copilot briefing information">
-                    i
-                </button>
+                        title="Copilot briefing information">i</button>
             </div>
 
             <p>
@@ -1498,7 +1473,6 @@
             </p>
 
             <div class="copilot-layout">
-                <!-- Left column: narrative instructions, concise with tooltip for detail -->
                 <div class="card card-secondary">
                     <div class="card-header-with-info">
                         <h3>How to use Copilot with STEPS</h3>
@@ -1506,9 +1480,7 @@
                                 class="info-icon"
                                 aria-label="How to use Copilot information"
                                 data-tooltip="First, use the other STEPS tabs to define and apply a scenario, then review endorsement, WTP, costs, epidemiological benefits, national simulation and sensitivity views. When you press the Copilot button, STEPS refreshes the interpretation text using the latest scenario and model outputs, combining a short description of the tool, detailed instructions for Copilot and the full scenario JSON. The prompt asks Copilot to prepare a three to five page policy brief with labelled sections on background, scenario description, endorsement and preference patterns, costs, outbreak related epidemiological benefits, benefit cost ratios, net present values, distributional issues and implementation notes, plus summary tables. After copying the text from the prompt panel, open Microsoft Copilot in a new tab, paste the full content into the Copilot input box, run it and then edit the draft policy brief in Copilot or your preferred word processor."
-                                title="How to use Copilot information">
-                            i
-                        </button>
+                                title="How to use Copilot information">i</button>
                     </div>
                     <p class="copilot-instructions">
                         Define and apply a scenario in STEPS, then move to this tab to generate an interpretation prompt with the latest scenario JSON for Microsoft Copilot.
@@ -1522,7 +1494,6 @@
                     </div>
                 </div>
 
-                <!-- Right column: button, prompt panel and status -->
                 <div class="card">
                     <h3>Prepare and copy the interpretation prompt</h3>
                     <p class="hint">
@@ -1549,16 +1520,10 @@
                             </div>
                         </div>
                         <div class="copilot-prompt-body">
-                            <textarea id="copilot-prompt-output"
-                                      rows="18"
-                                      readonly>
-Apply a configuration in STEPS and click "Open in Copilot and copy prompt" to generate the full interpretation prompt and scenario JSON. The text will appear here and will be ready to paste into Microsoft Copilot at https://copilot.microsoft.com/. When the Copilot page opens in a new window, paste the entire prompt into the Copilot input box and run it.
-                            </textarea>
+                            <textarea id="copilot-prompt-output" rows="18" readonly>Apply a configuration in STEPS and click "Open in Copilot and copy prompt" to generate the full interpretation prompt and scenario JSON. The text will appear here and will be ready to paste into Microsoft Copilot at https://copilot.microsoft.com/. When the Copilot page opens in a new window, paste the entire prompt into the Copilot input box and run it.</textarea>
                         </div>
                         <div class="copilot-status-row">
-                            <span class="copilot-status-pill" id="copilot-status-pill">
-                                Waiting for configuration
-                            </span>
+                            <span class="copilot-status-pill" id="copilot-status-pill">Waiting for configuration</span>
                             <span id="copilot-status-text">
                                 The Copilot interpretation text shown here is based on the most recent configuration and results. After changing the scenario, click the button above again so that the text is updated.
                             </span>
@@ -1577,13 +1542,14 @@ Apply a configuration in STEPS and click "Open in Copilot and copy prompt" to ge
             <p class="note">
                 The technical appendix includes a description of the JSON fields exported in this tab and how they relate to
                 the preference study, cost components and epidemiological multipliers.
-                <a href="technical-appendix.html" target="_blank">Open the technical appendix</a> for more detail.
+                <a href="technical-appendix.html" target="_blank" rel="noopener">Open the technical appendix</a> for more detail.
             </p>
         </div>
     </section>
 
     <!-- SCENARIOS TAB -->
-    <section id="scenariosTab" class="tabcontent">
+    <section id="scenariosTab" class="tabcontent" role="tabpanel" aria-labelledby="Saved scenarios">
+        <!-- unchanged content -->
         <div class="card"
              data-tour-step="scenarios"
              data-tour-title="Saved scenarios"
@@ -1635,23 +1601,49 @@ Apply a configuration in STEPS and click "Open in Copilot and copy prompt" to ge
                         <th>Notes</th>
                     </tr>
                     </thead>
-                    <tbody>
-                    <!-- Filled dynamically -->
-                    </tbody>
+                    <tbody></tbody>
                 </table>
             </div>
         </div>
     </section>
 </main>
 
-<!-- Toast container for bottom right pop up messages used across the tool -->
-<div id="toast-container"
-     class="toast-container"
-     aria-live="polite"
-     aria-atomic="true"></div>
+<!-- Toast container -->
+<div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="true"></div>
 
-<!-- Optional guided tour popover container (used by script.js if implemented) -->
+<!-- Guided tour popover container -->
 <div id="tour-popover" class="tour-popover" aria-hidden="true"></div>
+
+<!-- Snapshot modal (added as a safe placeholder so script.js does not fail if it expects it) -->
+<div id="snapshot-overlay" class="modal-overlay" aria-hidden="true"></div>
+<div id="snapshot-modal" class="modal" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="snapshot-title">
+    <div class="modal-header">
+        <h3 id="snapshot-title">Results summary</h3>
+        <button type="button" id="snapshot-close" class="btn-ghost-small" aria-label="Close results summary">Close</button>
+    </div>
+    <div id="snapshot-body" class="modal-body">
+        <div class="hint">
+            Apply a configuration and click “View results summary” to populate this panel.
+        </div>
+        <div id="snapshot-content" class="snapshot-content"></div>
+    </div>
+    <div class="modal-footer">
+        <div class="button-row">
+            <button type="button" id="snapshot-copy" class="btn-secondary" data-toast-message="Summary copied to clipboard.">
+                Copy summary
+            </button>
+            <button type="button" id="snapshot-download-pdf" class="btn-secondary" data-toast-message="Summary exported to PDF.">
+                Download summary (PDF)
+            </button>
+        </div>
+    </div>
+</div>
+
+<noscript>
+    <div class="noscript-banner">
+        This tool requires JavaScript to display tabs and compute results. Please enable JavaScript and refresh the page.
+    </div>
+</noscript>
 
 <script src="script.js"></script>
 </body>
