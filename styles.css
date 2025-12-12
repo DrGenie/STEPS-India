@@ -26,7 +26,6 @@
     --color-info: #0F766E;
     --color-info-soft: #E0F2FE;
 
-    /* Additional tokens for premium tables / metrics */
     --color-table-stripe: #F9FAFB;
     --color-table-hover: #EEF2FF;
     --color-table-header: #F3F4F6;
@@ -44,18 +43,20 @@
 
     --transition-fast: 0.15s ease-out;
     --transition-med: 0.22s ease-out;
+
+    --focus-ring: 0 0 0 2px rgba(37, 99, 235, 0.28);
 }
 
 /* Optional dark theme support */
 
 body[data-theme="worldbank-dark"] {
     --color-bg: #020617;
-    --color-card: #020617;
+    --color-card: #0B1120;
     --color-text: #E5E7EB;
     --color-text-muted: #9CA3AF;
     --color-border: #1F2937;
-    --color-border-strong: #4B5563;
-    --color-table-stripe: #020617;
+    --color-border-strong: #374151;
+    --color-table-stripe: #0B1120;
     --color-table-hover: #111827;
     --color-table-header: #0B1120;
     background-color: var(--color-bg);
@@ -64,22 +65,23 @@ body[data-theme="worldbank-dark"] {
 
 body[data-theme="worldbank-dark"] .card,
 body[data-theme="worldbank-dark"] .card-secondary {
-    background-color: #020617;
-    border-color: #1F2937;
+    background-color: var(--color-card);
+    border-color: var(--color-border);
     box-shadow: 0 10px 25px rgba(15, 23, 42, 0.45);
 }
 
 body[data-theme="worldbank-dark"] .tab-bar {
-    background-color: #020617;
+    background: linear-gradient(90deg, #0B1120, #020617);
+    border-bottom-color: var(--color-border);
 }
 
 body[data-theme="worldbank-dark"] .tab-link.active,
 body[data-theme="worldbank-dark"] .tablink.active {
-    background-color: #020617;
+    background-color: #0B1120;
 }
 
 body[data-theme="worldbank-dark"] .data-table tbody tr:nth-child(even) {
-    background-color: #020617;
+    background-color: var(--color-table-stripe);
 }
 
 body[data-theme="worldbank-dark"] .note,
@@ -88,23 +90,59 @@ body[data-theme="worldbank-dark"] .natsim-summary,
 body[data-theme="worldbank-dark"] .sensitivity-controls,
 body[data-theme="worldbank-dark"] .sensitivity-controls-panel,
 body[data-theme="worldbank-dark"] .copilot-actions,
-body[data-theme="worldbank-dark"] .copilot-help-box {
-    background-color: #020617;
-    border-color: #1F2937;
+body[data-theme="worldbank-dark"] .copilot-help-box,
+body[data-theme="worldbank-dark"] .advanced-log-box,
+body[data-theme="worldbank-dark"] .technical-preview {
+    background-color: #0B1120;
+    border-color: var(--color-border);
 }
 
 body[data-theme="worldbank-dark"] .attr-table-card {
-    background-color: #020617;
-    border-color: #1F2937;
+    background-color: #0B1120;
+    border-color: var(--color-border);
 }
 
 body[data-theme="worldbank-dark"] .copilot-prompt-panel {
-    background-color: #020617;
-    border-color: #1F2937;
+    background-color: #0B1120;
+    border-color: var(--color-border);
 }
 
 body[data-theme="worldbank-dark"] .copilot-prompt-body {
     background-color: #020617;
+}
+
+body[data-theme="worldbank-dark"] input[type="number"],
+body[data-theme="worldbank-dark"] input[type="text"],
+body[data-theme="worldbank-dark"] textarea,
+body[data-theme="worldbank-dark"] select {
+    background-color: #0B1120;
+    color: var(--color-text);
+    border-color: var(--color-border);
+}
+
+body[data-theme="worldbank-dark"] input[readonly],
+body[data-theme="worldbank-dark"] textarea[readonly] {
+    background-color: #020617;
+}
+
+body[data-theme="worldbank-dark"] .btn-secondary,
+body[data-theme="worldbank-dark"] .btn-icon {
+    background-color: #0B1120;
+    border-color: var(--color-border);
+}
+
+body[data-theme="worldbank-dark"] .btn-ghost {
+    border-color: var(--color-border);
+}
+
+body[data-theme="worldbank-dark"] .badge-outline {
+    background-color: #0B1120;
+    border-color: var(--color-border);
+}
+
+body[data-theme="worldbank-dark"] .modal-content {
+    background-color: #0B1120;
+    border: 1px solid var(--color-border);
 }
 
 /* Global reset */
@@ -129,6 +167,11 @@ body {
     background: radial-gradient(circle at top left, #E0ECFF 0, #F3F4F6 40%, #E5E7EB 100%);
     color: var(--color-text);
     -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+}
+
+body[data-theme="worldbank-dark"] {
+    background: radial-gradient(circle at top left, rgba(37, 99, 235, 0.18) 0, #020617 42%, #020617 100%);
 }
 
 /* Basic links */
@@ -161,8 +204,8 @@ a:hover {
 }
 
 body[data-theme="worldbank-dark"] .app-header {
-    background-color: rgba(15, 23, 42, 0.96);
-    border-bottom-color: rgba(30, 64, 175, 0.6);
+    background-color: rgba(2, 6, 23, 0.92);
+    border-bottom-color: rgba(30, 64, 175, 0.35);
 }
 
 .app-header-left {
@@ -272,6 +315,17 @@ body[data-theme="worldbank-dark"] .app-header {
 
 button {
     font-family: inherit;
+}
+
+.btn-primary,
+.btn-secondary,
+.btn-ghost,
+.btn-ghost-small,
+.btn-primary-small,
+.btn-link-small,
+.tab-link,
+.tablink {
+    -webkit-tap-highlight-color: transparent;
 }
 
 .btn-primary,
@@ -408,7 +462,8 @@ button:disabled,
 .btn-secondary:disabled,
 .btn-ghost:disabled,
 .btn-primary-small:disabled,
-.btn-ghost-small:disabled {
+.btn-ghost-small:disabled,
+.btn-icon:disabled {
     opacity: 0.5;
     cursor: not-allowed;
     transform: none;
@@ -457,8 +512,7 @@ button:disabled,
     border-radius: 999px 999px 0 0;
 }
 
-/* Support both .tab-link (HTML/CSS) and .tablink (existing JS) */
-
+/* Support both .tab-link (HTML) and .tablink (existing JS) */
 .tab-link,
 .tablink {
     border: none;
@@ -495,14 +549,14 @@ button:disabled,
     color: var(--color-primary-hover);
 }
 
-/* Content panels: support both .tab-panel (HTML/CSS) and .tabcontent (existing JS) */
-
+/* Content panels: support both .tab-panel (HTML) and .tabcontent (existing JS) */
 .tab-panel,
 .tabcontent {
     display: none;
     margin-top: 12px;
 }
 
+/* If JS uses inline style display:block, it will still show. */
 .tab-panel.active,
 .tabcontent.active {
     display: block;
@@ -531,9 +585,20 @@ button:disabled,
     border-color: rgba(15, 23, 42, 0.08);
 }
 
+@media (hover: none) {
+    .card:hover {
+        transform: none;
+        box-shadow: var(--shadow-soft);
+    }
+}
+
 .card-secondary {
     background-color: #F9FAFB;
     box-shadow: var(--shadow-soft);
+}
+
+body[data-theme="worldbank-dark"] .card-secondary {
+    background-color: #0B1120;
 }
 
 .card-config {
@@ -647,8 +712,6 @@ button:disabled,
     height: 100%;
     border: 0;
 }
-
-/* Fallback if iframe is placed directly in card */
 
 .card iframe {
     max-width: 100%;
@@ -806,7 +869,7 @@ textarea:focus,
 select:focus {
     outline: none;
     border-color: var(--color-primary);
-    box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.25);
+    box-shadow: var(--focus-ring);
     background-color: #FFFFFF;
     transform: translateY(-0.5px);
 }
@@ -838,6 +901,10 @@ input[type="range"] {
     margin-top: 4px;
 }
 
+body[data-theme="worldbank-dark"] input[type="range"] {
+    background: #1F2937;
+}
+
 input[type="range"]::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
@@ -847,6 +914,10 @@ input[type="range"]::-webkit-slider-thumb {
     background: var(--color-primary);
     cursor: pointer;
     box-shadow: 0 0 0 3px #FFFFFF, 0 0 0 4px rgba(37, 99, 235, 0.25);
+}
+
+body[data-theme="worldbank-dark"] input[type="range"]::-webkit-slider-thumb {
+    box-shadow: 0 0 0 3px #020617, 0 0 0 4px rgba(37, 99, 235, 0.28);
 }
 
 input[type="range"]::-moz-range-thumb {
@@ -884,6 +955,10 @@ input[type="range"]::-moz-range-thumb {
     border-radius: 999px;
 }
 
+body[data-theme="worldbank-dark"] .pill-toggle-group {
+    background-color: #111827;
+}
+
 .pill-toggle {
     border-radius: 999px;
     border: none;
@@ -903,6 +978,11 @@ input[type="range"]::-moz-range-thumb {
     background-color: #FFFFFF;
     color: var(--color-primary);
     box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.25);
+}
+
+body[data-theme="worldbank-dark"] .pill-toggle.active {
+    background-color: #0B1120;
+    box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.35);
 }
 
 /* Switch pill */
@@ -988,6 +1068,11 @@ input[type="range"]::-moz-range-thumb {
     border-color: var(--color-border-strong);
     transform: translateY(-0.5px);
     box-shadow: var(--shadow-soft);
+}
+
+body[data-theme="worldbank-dark"] .info-icon {
+    background-color: #0B1120;
+    border-color: var(--color-border);
 }
 
 /* Tooltip bubble (injected by JS) */
@@ -1098,6 +1183,10 @@ input[type="range"]::-moz-range-thumb {
     background-color: #EFF6FF;
 }
 
+body[data-theme="worldbank-dark"] .config-endorsement-row {
+    background-color: rgba(37, 99, 235, 0.16);
+}
+
 .config-endorsement-label {
     display: flex;
     align-items: center;
@@ -1199,6 +1288,10 @@ input[type="range"]::-moz-range-thumb {
     background-color: #F3F4FF;
 }
 
+body[data-theme="worldbank-dark"] .metric-block .metric-value {
+    background-color: rgba(37, 99, 235, 0.14);
+}
+
 .metric-caption {
     font-size: 12px;
     color: var(--color-text-muted);
@@ -1213,8 +1306,6 @@ input[type="range"]::-moz-range-thumb {
     margin-top: 10px;
     padding-top: 4px;
 }
-
-/* Canvas charts get full width */
 
 canvas {
     max-width: 100%;
@@ -1336,7 +1427,6 @@ canvas {
     min-width: 120px;
 }
 
-/* Compact text option for dense sensitivity tables */
 .table-small-text {
     font-size: 12px;
 }
@@ -1408,7 +1498,6 @@ canvas {
     overflow: auto;
 }
 
-/* Settings log box used in the Settings tab */
 .advanced-log-box {
     margin-top: 8px;
     padding: 8px 10px;
@@ -1427,7 +1516,8 @@ canvas {
    Modal
    =========================== */
 
-.modal {
+.modal,
+#modal {
     position: fixed;
     inset: 0;
     background-color: rgba(15, 23, 42, 0.40);
@@ -1436,11 +1526,11 @@ canvas {
     justify-content: center;
     z-index: 90;
     opacity: 1;
-    transition:
-        opacity var(--transition-med);
+    transition: opacity var(--transition-med);
 }
 
-.modal.hidden {
+.modal.hidden,
+#modal.hidden {
     display: none;
 }
 
@@ -1480,7 +1570,8 @@ canvas {
    Toast
    =========================== */
 
-.toast {
+.toast,
+#toast {
     position: fixed;
     right: 16px;
     bottom: 16px;
@@ -1502,7 +1593,9 @@ canvas {
 }
 
 .toast.show,
-.toast.visible {
+.toast.visible,
+#toast.show,
+#toast.visible {
     opacity: 1;
     transform: translateY(0);
     pointer-events: auto;
@@ -1524,18 +1617,21 @@ canvas {
    Guided tour
    =========================== */
 
-.tour-overlay {
+.tour-overlay,
+#tour-overlay {
     position: fixed;
     inset: 0;
     background-color: rgba(15, 23, 42, 0.30);
     z-index: 98;
 }
 
-.tour-overlay.hidden {
+.tour-overlay.hidden,
+#tour-overlay.hidden {
     display: none;
 }
 
-.tour-popover {
+.tour-popover,
+#tour-popover {
     position: fixed;
     max-width: 320px;
     background-color: #FFFFFF;
@@ -1547,7 +1643,8 @@ canvas {
     border-top: 3px solid var(--color-primary);
 }
 
-.tour-popover.hidden {
+.tour-popover.hidden,
+#tour-popover.hidden {
     display: none;
 }
 
@@ -1604,8 +1701,6 @@ canvas {
     background-color: #E5E7EB;
 }
 
-/* Tour trigger icon */
-
 .tour-icon {
     width: 16px;
     height: 16px;
@@ -1656,8 +1751,6 @@ canvas {
     flex-wrap: wrap;
     gap: 8px;
 }
-
-/* Metric badges for BCR / NPV and other indicators */
 
 .metric-badge {
     display: inline-flex;
@@ -1769,6 +1862,10 @@ textarea:focus-visible {
     padding: 8px 10px;
 }
 
+body[data-theme="worldbank-dark"] .kpi-card {
+    background-color: #0B1120;
+}
+
 .kpi-label {
     font-size: 12px;
     color: var(--color-text-muted);
@@ -1810,6 +1907,10 @@ textarea:focus-visible {
     color: var(--color-text-muted);
 }
 
+body[data-theme="worldbank-dark"] .tag {
+    background-color: #0B1120;
+}
+
 .tag-strong {
     border-color: var(--color-primary-soft);
     background-color: var(--color-primary-soft);
@@ -1839,13 +1940,20 @@ textarea:focus-visible {
         background-color: #CBD5F5;
         border-radius: 999px;
     }
+
+    body[data-theme="worldbank-dark"] * {
+        scrollbar-color: #1F2937 transparent;
+    }
+
+    body[data-theme="worldbank-dark"] *::-webkit-scrollbar-thumb {
+        background-color: #1F2937;
+    }
 }
 
 /* ===========================
    Sensitivity / DCE benefits tab
    =========================== */
 
-/* Compact control panel at the top of the tab */
 .sensitivity-controls,
 .sensitivity-controls-panel {
     margin: 10px 0 12px;
@@ -1872,19 +1980,16 @@ textarea:focus-visible {
     color: var(--color-text-muted);
 }
 
-/* Endorsement input inline label */
 .endorsement-inline-group {
     display: flex;
     align-items: center;
     gap: 6px;
 }
 
-/* Sensitivity results tables */
 .sensitivity-table {
     min-width: 900px;
 }
 
-/* Optional wrapper for multiple tables */
 .sensitivity-tables-wrapper {
     display: flex;
     flex-direction: column;
@@ -1892,7 +1997,6 @@ textarea:focus-visible {
     margin-top: 8px;
 }
 
-/* Section labels for grouped sensitivity sections */
 .sensitivity-section-label {
     font-size: 13px;
     font-weight: 500;
@@ -1900,31 +2004,30 @@ textarea:focus-visible {
     margin-top: 6px;
 }
 
-/* Small caption under sensitivity tables */
 .sensitivity-caption {
     margin-top: 6px;
     font-size: 12px;
     color: var(--color-text-muted);
 }
 
-/* Numeric columns for INR / ratios */
 .data-table th.numeric-col,
 .data-table td.numeric-col {
     text-align: right;
     font-variant-numeric: tabular-nums;
 }
 
-/* Subtle border between grouped sections */
 .sensitivity-table-divider-row td {
     border-top: 2px solid var(--color-border-strong);
 }
 
-/* Highlight row when selected via JS */
 .sensitivity-row-selected {
     background-color: #EEF2FF !important;
 }
 
-/* On narrower screens, make control panel stack cleanly */
+body[data-theme="worldbank-dark"] .sensitivity-row-selected {
+    background-color: rgba(37, 99, 235, 0.14) !important;
+}
+
 @media (max-width: 1024px) {
     .sensitivity-controls-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1973,6 +2076,10 @@ textarea:focus-visible {
     padding: 12px 14px;
 }
 
+body[data-theme="worldbank-dark"] .cost-config-card {
+    background-color: #0B1120;
+}
+
 .cost-config-header {
     display: flex;
     align-items: center;
@@ -2012,6 +2119,10 @@ textarea:focus-visible {
     padding: 12px 14px;
 }
 
+body[data-theme="worldbank-dark"] .costing-summary-card {
+    background-color: #0B1120;
+}
+
 .costing-summary-header {
     display: flex;
     align-items: center;
@@ -2034,6 +2145,10 @@ textarea:focus-visible {
     border: 1px solid #FECACA;
     font-size: 12px;
     color: var(--color-danger);
+}
+
+body[data-theme="worldbank-dark"] .costing-error {
+    border-color: rgba(248, 113, 113, 0.35);
 }
 
 /* ===========================
@@ -2067,8 +2182,6 @@ textarea:focus-visible {
     font-size: 12px;
     color: var(--color-text-muted);
 }
-
-/* Prompt + JSON panel */
 
 .copilot-prompt-panel {
     background-color: #0F172A;
@@ -2112,8 +2225,6 @@ textarea:focus-visible {
     word-break: break-word;
 }
 
-/* Textarea inside Copilot prompt */
-
 .copilot-prompt-body textarea {
     width: 100%;
     min-height: 180px;
@@ -2126,8 +2237,6 @@ textarea:focus-visible {
     line-height: 1.45;
     resize: vertical;
 }
-
-/* Status chip under the prompt */
 
 .copilot-status-row {
     margin-top: 6px;
@@ -2151,8 +2260,6 @@ textarea:focus-visible {
     color: #E5E7EB;
 }
 
-/* Compact “Open Copilot” helper area */
-
 .copilot-actions {
     margin-top: 10px;
     padding: 8px 10px;
@@ -2170,8 +2277,6 @@ textarea:focus-visible {
     color: var(--color-text-muted);
 }
 
-/* Small badge for the Copilot URL */
-
 .copilot-url-pill {
     display: inline-flex;
     align-items: center;
@@ -2182,8 +2287,6 @@ textarea:focus-visible {
     font-size: 11px;
     color: var(--color-primary);
 }
-
-/* Optional dark-panel copy button (if added via JS) */
 
 .copilot-copy-btn {
     border-radius: 999px;
@@ -2218,7 +2321,6 @@ textarea:focus-visible {
    PDF export specific styling
    =========================== */
 
-/* Wrapper and headings used when exporting sensitivity tables to PDF */
 .pdf-export-wrapper {
     font-size: 12px;
     color: var(--color-text);
@@ -2236,7 +2338,6 @@ textarea:focus-visible {
     margin-bottom: 6px;
 }
 
-/* Table layout tuned for PDF rendering to keep content within page borders */
 .pdf-export-table {
     width: 100%;
     border-collapse: collapse;
@@ -2258,6 +2359,37 @@ textarea:focus-visible {
     background-color: var(--color-table-header);
     font-weight: 600;
     color: var(--color-text-muted);
+}
+
+/* ===========================
+   Reduced motion
+   =========================== */
+
+@media (prefers-reduced-motion: reduce) {
+    * {
+        scroll-behavior: auto !important;
+    }
+
+    .card,
+    .btn-primary,
+    .btn-secondary,
+    .btn-ghost,
+    .btn-icon,
+    .tab-link,
+    .tablink,
+    .toast,
+    #toast,
+    .tooltip-bubble {
+        transition: none !important;
+    }
+
+    .card:hover,
+    .btn-primary:hover,
+    .btn-secondary:hover,
+    .btn-ghost:hover,
+    .btn-icon:hover {
+        transform: none !important;
+    }
 }
 
 /* ===========================
