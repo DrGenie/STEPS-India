@@ -308,6 +308,48 @@ const TOOLTIP_LIBRARY = {
 };
 
 /* ===========================
+   Tooltip aliases for legacy result and national keys
+   =========================== */
+
+Object.assign(TOOLTIP_LIBRARY, {
+  result_wtp_total_cohort: {
+    title: "Total willingness to pay per cohort",
+    body:
+      "Aggregate willingness to pay for one cohort. It is computed as willingness to pay per trainee per month multiplied by the programme duration in months and multiplied by trainees per cohort. It is an indicative value and should be interpreted alongside cost and epidemiological assumptions."
+  },
+  result_programme_cost_cohort: {
+    title: "Programme cost per cohort",
+    body:
+      "Direct financial cost of running one cohort. It is computed as cost per trainee per month multiplied by programme duration in months and multiplied by trainees per cohort. It excludes opportunity cost unless opportunity cost is included in the economic cost concept."
+  },
+  result_total_cost_cohort: {
+    title: "Total economic cost per cohort",
+    body:
+      "Economic cost concept used for benefit cost calculations. It equals programme cost per cohort plus opportunity cost of trainee time when that component is switched on. Higher values increase the cost base that benefits must exceed to generate ratios above one."
+  },
+  result_net_benefit_cohort: {
+    title: "Net benefit per cohort",
+    body:
+      "Difference between discounted outbreak related epidemiological benefit per cohort and total economic cost per cohort under current settings. Positive values indicate benefits exceed costs; negative values indicate costs exceed the outbreak benefit under the current outbreak value, planning horizon and discount rate assumptions."
+  },
+  result_graduates: {
+    title: "Graduates (all cohorts)",
+    body:
+      "Expected number of graduates across all cohorts after applying completion rates and the endorsement share. It is computed from trainees per cohort times completion rate times endorsement share, multiplied by the number of cohorts. It reflects the scale of trained field epidemiologists produced under the configuration."
+  },
+  result_outbreak_responses: {
+    title: "Outbreak responses per year",
+    body:
+      "Expected outbreak responses per year at the configured scale, based on graduates, assumed outbreaks handled per graduate per year, and the response time multiplier. Faster response time increases the credited outbreak responses through the multiplier."
+  },
+  national_outbreaks_per_year: {
+    title: "Outbreak responses per year (national)",
+    body:
+      "Aggregate outbreak responses per year implied by all graduates across all cohorts, adjusted by the response time multiplier. It is a model based output dependent on outbreaks per graduate per year and the response time multiplier."
+  }
+});
+
+/* ===========================
    Global state
    =========================== */
 
