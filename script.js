@@ -2714,245 +2714,200 @@ wireSettingsApplyButtons();
 updateCostSliderLabel();
 updateCurrencyToggle();
 });
-/* ===========================
-   HOTFIX v2025-12-13
-   Settings Apply + Settings Log + Missing Tooltips
-   =========================== */
+
+// STEPS India enhancements: settings log + opt out / cost tooltips
 (function () {
-  function onReady(fn) {
-    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", fn);
-    else fn();
-  }
-
-  function qsa(sel) { return Array.from(document.querySelectorAll(sel)); }
-  function norm(s) { return String(s || "").trim().toLowerCase(); }
-
-  function safeEnable(btn) {
-    if (!btn) return;
-    try { btn.disabled = false; } catch (e) {}
-    btn.removeAttribute("disabled");
-    btn.setAttribute("aria-disabled", "false");
-    if (btn.classList) btn.classList.remove("disabled");
-    try {
-      const pe = window.getComputedStyle(btn).pointerEvents;
-      if (pe === "none") btn.style.pointerEvents = "auto";
-    } catch (e) {}
-  }
-
-  function toast(msg) {
-    try {
-      if (typeof showToast === "function") showToast(msg, "success");
-      else console.log(msg);
-    } catch (e) { console.log(msg); }
-  }
-
-  function getNumberFrom(selectors, fallback) {
-    for (const sel of selectors) {
-      const el = sel.startsWith("#") ? document.querySelector(sel) : document.getElementById(sel);
-      if (!el) continue;
-      const raw = (el.value !== undefined ? el.value : el.getAttribute("data-value"));
-      const v = Number(raw);
-      if (!Number.isNaN(v)) return v;
+  function findButtonByTextExact(text) {
+    const candidates = document.querySelectorAll("button, .btn, .primary-btn, .primary-button");
+    const target = text.toLowerCase();
+    for (const el of candidates) {
+      const label = el.textContent.replace(/\s+/g, " ").trim().toLowerCase();
+      if (label === target) return el;
     }
-    return fallback;
+    return null;
   }
 
-  function getBoolFrom(selectors, fallback) {
-    for (const sel of selectors) {
-      const el = sel.startsWith("#") ? document.querySelector(sel) : document.getElementById(sel);
-      if (!el) continue;
-      if (typeof el.checked === "boolean") return !!el.checked;
-      const raw = norm(el.value || el.getAttribute("data-value") || el.getAttribute("aria-checked"));
-      if (raw === "true") return true;
-      if (raw === "false") return false;
+  function getOrCreateSettingsLogContainer() {
+    let container = document.getElementById("settings-log");
+    if (container) return container;
+
+    const headings = document.querySelectorAll("h2,h3,h4,h5,h6");
+    let anchor = null;
+    for (const h of headings) {
+      const txt = h.textContent.replace(/\s+/g, " ").trim().toLowerCase();
+      if (txt.indexOf("settings log for this session") !== -1) {
+        anchor = h;
+        break;
+      }
     }
-    return fallback;
-  }
 
-  function getCurrencyFromUI() {
-    const checked = document.querySelector('input[name="currency"]:checked');
-    if (checked && checked.value) return checked.value;
-    const sel = document.querySelector("#currency, #currencySelect, #currency-select");
-    if (sel && sel.value) return sel.value;
-    return (typeof appState !== "undefined" && appState.currency) ? appState.currency : "INR";
-  }
+    container = document.createElement("div");
+    container.id = "settings-log";
+    container.className = "settings-log-entries";
 
-  function resolveApplySettingsButton() {
-    const direct =
-      document.querySelector("#btn-apply-settings, #apply-settings, #applySettingsBtn, #apply-settings-btn, #settings-apply-btn") ||
-      document.getElementById("btn-apply-settings") ||
-      document.getElementById("apply-settings") ||
-      document.getElementById("applySettingsBtn") ||
-      document.getElementById("apply-settings-btn") ||
-      document.getElementById("settings-apply-btn");
-    if (direct) return direct;
-
-    const btnByText = qsa("button").find(b => norm(b.textContent) === "apply settings");
-    return btnByText || null;
-  }
-
-  function resolveSettingsLogContainer() {
-    const direct =
-      document.querySelector("#settings-log-session, #settingsLogSession, #settings-log, #settingsLog, #settings-log-list, #settingsLogList, .settings-log, .settings-log-list");
-    if (direct) return direct;
-
-    const label = qsa("h1,h2,h3,h4,h5,p,div,strong,span")
-      .find(el => /settings log for this session/i.test(el.textContent || ""));
-    if (!label) return null;
-
-    const next = label.nextElementSibling;
-    if (next && (next.tagName === "UL" || next.tagName === "OL" || /log/i.test(next.className || next.id || ""))) return next;
-
-    const inParent = label.parentElement ? label.parentElement.querySelector("ul,ol,.settings-log,.settings-log-list,#settings-log-session,#settings-log") : null;
-    return inParent || null;
-  }
-
-  function writeSettingsLogEntry(snapshot) {
-    const box = resolveSettingsLogContainer();
-    if (!box) return;
-
-    const ts = new Date();
-    const stamp = ts.toLocaleString(undefined, { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
-
-    const line =
-      `${stamp} | Currency: ${snapshot.currency}` +
-      ` | Planning horizon (years): ${snapshot.planningHorizonYears}` +
-      ` | Discount rate: ${snapshot.epiDiscountRate}` +
-      ` | INR to USD: ${snapshot.inrToUsdRate}` +
-      ` | Opportunity cost included: ${snapshot.includeOppCost ? "Yes" : "No"}`;
-
-    if (box.tagName === "UL" || box.tagName === "OL") {
-      const li = document.createElement("li");
-      li.textContent = line;
-      box.appendChild(li);
+    if (anchor && anchor.parentNode) {
+      anchor.parentNode.insertBefore(container, anchor.nextSibling);
     } else {
-      const div = document.createElement("div");
-      div.textContent = line;
-      box.appendChild(div);
+      document.body.appendChild(container);
     }
-
-    try { box.style.display = ""; } catch (e) {}
+    return container;
   }
 
-  function applySettingsFromUI() {
-    const snapshot = {
-      currency: getCurrencyFromUI(),
-      planningHorizonYears: getNumberFrom(
-        ["#planningHorizonYears", "#planning-horizon-years", "#planningHorizon", "#planning-horizon", "planningHorizonYears", "planningHorizon"],
-        (typeof appState !== "undefined" && appState.epiSettings && appState.epiSettings.general) ? appState.epiSettings.general.planningHorizonYears : 5
-      ),
-      epiDiscountRate: getNumberFrom(
-        ["#epiDiscountRate", "#epi-discount-rate", "#discountRate", "#discount-rate", "epiDiscountRate", "discountRate"],
-        (typeof appState !== "undefined" && appState.epiSettings && appState.epiSettings.general) ? appState.epiSettings.general.epiDiscountRate : 0.03
-      ),
-      inrToUsdRate: getNumberFrom(
-        ["#inrToUsdRate", "#inr-to-usd", "#usdRate", "#usd-rate", "inrToUsdRate", "usdRate"],
-        (typeof appState !== "undefined" && appState.usdRate) ? appState.usdRate : 83
-      ),
-      includeOppCost: getBoolFrom(
-        ["#includeOppCost", "#include-opp-cost", "#oppCostToggle", "#opp-cost-toggle", "includeOppCost", "oppCostToggle"],
-        false
-      )
-    };
+  function buildSettingsSummary() {
+    const now = new Date();
+    const timestamp = now.toLocaleString();
 
-    try {
-      if (typeof appState !== "undefined") {
-        appState.currency = snapshot.currency;
-        appState.usdRate = snapshot.inrToUsdRate;
+    const headings = document.querySelectorAll("h2,h3,h4,h5,h6");
+    let settingsSection = null;
+    for (const h of headings) {
+      const txt = h.textContent.replace(/\s+/g, " ").trim().toLowerCase();
+      if (txt.indexOf("settings and key assumptions") !== -1) {
+        settingsSection = h.closest(".tabcontent") || h.parentElement;
+        break;
+      }
+    }
 
-        if (appState.epiSettings && appState.epiSettings.general) {
-          appState.epiSettings.general.planningHorizonYears = snapshot.planningHorizonYears;
-          appState.epiSettings.general.epiDiscountRate = snapshot.epiDiscountRate;
-          appState.epiSettings.general.inrToUsdRate = snapshot.inrToUsdRate;
+    if (!settingsSection) {
+      return "Settings applied at " + timestamp;
+    }
+
+    const inputs = settingsSection.querySelectorAll("input, select, textarea");
+    const parts = [];
+
+    inputs.forEach(input => {
+      if (input.type === "button" || input.type === "submit") return;
+
+      const value = input.type === "checkbox" ? (input.checked ? "On" : "Off") : input.value;
+      if (value === null || value === "" || typeof value === "undefined") return;
+
+      let labelText = "";
+      if (input.id) {
+        const label = document.querySelector('label[for="' + input.id + '"]');
+        if (label) labelText = label.textContent.trim();
+      }
+      if (!labelText) {
+        const parentLabel = input.closest("label");
+        if (parentLabel) labelText = parentLabel.textContent.trim();
+      }
+      if (!labelText) {
+        labelText =
+          input.getAttribute("aria-label") ||
+          input.name ||
+          input.id ||
+          "Setting";
+      }
+
+      labelText = labelText.replace(/\s+/g, " ");
+      parts.push(labelText + ": " + value);
+    });
+
+    if (!parts.length) {
+      return "Settings applied at " + timestamp;
+    }
+
+    return "Settings applied at " + timestamp + " | " + parts.join(" · ");
+  }
+
+  function appendSettingsLogEntry(message) {
+    if (!message) return;
+    const container = getOrCreateSettingsLogContainer();
+    const entry = document.createElement("div");
+    entry.className = "settings-log-entry";
+    entry.textContent = message;
+    container.appendChild(entry);
+  }
+
+  function attachTooltipByLabel(labelText, tooltipText) {
+    const all = document.querySelectorAll("body *");
+    const targetLabelLower = labelText.toLowerCase();
+    let labelEl = null;
+
+    for (const el of all) {
+      if (!el.childElementCount && el.textContent) {
+        const txt = el.textContent.replace(/\s+/g, " ").trim().toLowerCase();
+        if (txt.indexOf(targetLabelLower) === 0) {
+          labelEl = el;
+          break;
         }
       }
-    } catch (e) {}
+    }
+    if (!labelEl) return;
 
-    return snapshot;
-  }
-
-  function ensureCoreTooltips() {
-    const lib = (typeof TOOLTIP_LIBRARY !== "undefined" && TOOLTIP_LIBRARY) ? TOOLTIP_LIBRARY : {
-      optout_alt: "The opt out alternative represents a situation where no new FETP training is funded under the scenario being considered.",
-      cost_components: "Cost components group programme expenses for each tier, including salaries and benefits, travel, training inputs, trainee support and indirect items such as opportunity cost.",
-      opp_cost: "The opportunity cost of trainee time reflects the value of salary time that trainees spend in training instead of normal duties, per trainee per month."
-    };
-
-    const idMap = [
-      { id: "#optout-alt-info", tip: lib.optout_alt },
-      { id: "#cost-components-info", tip: lib.cost_components },
-      { id: "#opp-cost-info", tip: lib.opp_cost }
-    ];
-    idMap.forEach(x => {
-      const el = document.querySelector(x.id);
-      if (el && !el.getAttribute("data-tooltip")) el.setAttribute("data-tooltip", x.tip);
-    });
-
-    const byKey = qsa("[data-tooltip-key],[data-tip-key],[data-info-key]").filter(el => !el.getAttribute("data-tooltip"));
-    byKey.forEach(el => {
-      const k = norm(el.getAttribute("data-tooltip-key") || el.getAttribute("data-tip-key") || el.getAttribute("data-info-key"));
-      if (k.includes("opt") && k.includes("out")) el.setAttribute("data-tooltip", lib.optout_alt);
-      if (k.includes("cost") && k.includes("component")) el.setAttribute("data-tooltip", lib.cost_components);
-      if (k.includes("opp") || (k.includes("opportunity") && k.includes("cost"))) el.setAttribute("data-tooltip", lib.opp_cost);
-    });
-
-    const rows = qsa("tr, .definition-row, .attribute-row, .levels-row, .table-row, .card, .panel, .settings-row");
-    rows.forEach(row => {
-      const t = norm(row.textContent);
-      if (!t) return;
-      const icon = row.querySelector(".info-icon,[data-tooltip],[data-tooltip-key],[data-tip-key],[data-info-key]");
+    let icon = labelEl.nextElementSibling;
+    if (!icon || icon.textContent.replace(/\s+/g, "").trim() !== "i") {
+      icon = labelEl.parentElement.querySelector(".info-icon");
       if (!icon) return;
-      if (icon.getAttribute("data-tooltip")) return;
-
-      if (t.includes("opt out alternative") || t.includes("opt-out alternative")) icon.setAttribute("data-tooltip", lib.optout_alt);
-      else if (t.includes("cost components") || t.includes("cost component")) icon.setAttribute("data-tooltip", lib.cost_components);
-      else if (t.includes("opportunity") && t.includes("cost")) icon.setAttribute("data-tooltip", lib.opp_cost);
-    });
-  }
-
-  function wireApplySettings() {
-    if (window.__STEPS_APPLY_SETTINGS_WIRED === true) return;
-
-    const btn = resolveApplySettingsButton();
-    if (!btn) return;
-
-    safeEnable(btn);
-
-    if (btn.dataset && btn.dataset.applySettingsWired === "1") {
-      window.__STEPS_APPLY_SETTINGS_WIRED = true;
-      return;
     }
 
-    btn.addEventListener("click", function () {
-      const snapshot = applySettingsFromUI();
-      toast("Settings applied");
-      writeSettingsLogEntry(snapshot);
-
-      try {
-        if (typeof window.recomputeAll === "function") window.recomputeAll();
-        else if (typeof window.updateAllOutputs === "function") window.updateAllOutputs();
-        else if (typeof window.updateResults === "function") window.updateResults();
-        else if (typeof window.renderAll === "function") window.renderAll();
-      } catch (e) {}
-    });
-
-    if (btn.dataset) btn.dataset.applySettingsWired = "1";
-    window.__STEPS_APPLY_SETTINGS_WIRED = true;
+    if (!icon.getAttribute("data-tooltip")) {
+      icon.setAttribute("data-tooltip", tooltipText);
+      icon.setAttribute("tabindex", "0");
+    }
   }
 
-  onReady(function () {
-    try {
-      if (typeof initTooltips === "function" && window.__STEPS_TOOLTIPS_INIT !== true) {
-        initTooltips();
-        window.__STEPS_TOOLTIPS_INIT = true;
+  function enhanceDefinitionTooltips() {
+    attachTooltipByLabel(
+      "Ø Opt out alternative",
+      "An opt out option where no new FETP training is funded under the scenario being considered. This is the benchmark of no new FETP investment."
+    );
+    attachTooltipByLabel(
+      "Cost components",
+      "Combined cost components for each tier, covering salary and benefits, travel, training, trainee support and indirect costs including opportunity cost."
+    );
+    attachTooltipByLabel(
+      "⏳ Opportunity cost of trainee time",
+      "The value of trainee salary time spent in training instead of normal duties, per trainee per month. When included, this converts financial costs into total economic costs."
+    );
+  }
+
+  function enhanceSettingsApplyBehaviour() {
+    const btn =
+      document.getElementById("settings-apply") ||
+      document.getElementById("settings-apply-btn") ||
+      document.getElementById("apply-settings") ||
+      document.querySelector('[data-settings-apply="true"]') ||
+      document.querySelector('[data-role="settings-apply"]') ||
+      findButtonByTextExact("Apply settings");
+
+    if (!btn) return;
+
+    btn.addEventListener("click", function () {
+      const message = buildSettingsSummary();
+
+      if (typeof window.logSettingsMessage === "function") {
+        try {
+          window.logSettingsMessage(message);
+        } catch (e) {
+          appendSettingsLogEntry(message);
+        }
+      } else {
+        appendSettingsLogEntry(message);
       }
-    } catch (e) {}
 
-    try {
-      if (typeof initDefinitionTooltips === "function") initDefinitionTooltips();
-    } catch (e) {}
+      if (typeof window.showToast === "function") {
+        try {
+          window.showToast("Settings applied for this session.");
+        } catch (e) {
+          // silent fallback
+        }
+      }
+    });
+  }
 
-    try { ensureCoreTooltips(); } catch (e) {}
-    try { wireApplySettings(); } catch (e) {}
+  function enhanceStepps() {
+    enhanceDefinitionTooltips();
+    enhanceSettingsApplyBehaviour();
+
+    if (typeof window.initTooltips === "function") {
+      try {
+        window.initTooltips();
+      } catch (e) {
+        // ignore
+      }
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    setTimeout(enhanceStepps, 0);
   });
 })();
