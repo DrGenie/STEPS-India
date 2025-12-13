@@ -307,45 +307,97 @@ const TOOLTIP_LIBRARY = {
   }
 };
 
-/* ===========================
-   Tooltip aliases for legacy result and national keys
-   =========================== */
-
 Object.assign(TOOLTIP_LIBRARY, {
-  result_wtp_total_cohort: {
-    title: "Total willingness to pay per cohort",
+  result_endorsement: {
+    title: "Endorsement rate",
     body:
-      "Aggregate willingness to pay for one cohort. It is computed as willingness to pay per trainee per month multiplied by the programme duration in months and multiplied by trainees per cohort. It is an indicative value and should be interpreted alongside cost and epidemiological assumptions."
+      "Predicted share of stakeholders who would endorse funding the configured FETP option rather than choosing the opt out alternative. Calculated from the mixed logit utility for the programme option versus opt out, converted to a probability and expressed as a percent. Higher values indicate stronger stated support for the package under current assumptions."
+  },
+  result_optout: {
+    title: "Opt out rate",
+    body:
+      "Predicted share of stakeholders who would choose the opt out alternative rather than fund the configured FETP option. It is the complement of the endorsement rate and sums to 100 percent with it. Higher values indicate weaker stated support for the package."
+  },
+  result_wtp_per_trainee: {
+    title: "WTP per trainee per month",
+    body:
+      "Indicative willingness to pay per trainee per month implied by the preference model. Calculated as non cost utility for the configured option divided by the absolute value of the cost coefficient, scaled to rupees. Higher values indicate higher implied value placed on the package by respondents in the preference study."
+  },
+  result_wtp_total_cohort: {
+    title: "Total WTP per cohort",
+    body:
+      "Indicative total willingness to pay for one cohort. Calculated as WTP per trainee per month multiplied by programme duration in months for the selected tier and the number of trainees per cohort. This is not a budget, it is an implied value measure from stated preferences."
   },
   result_programme_cost_cohort: {
     title: "Programme cost per cohort",
     body:
-      "Direct financial cost of running one cohort. It is computed as cost per trainee per month multiplied by programme duration in months and multiplied by trainees per cohort. It excludes opportunity cost unless opportunity cost is included in the economic cost concept."
+      "Direct financial programme cost for one cohort. Calculated as cost per trainee per month multiplied by programme duration in months for the selected tier and the number of trainees per cohort. This excludes opportunity cost unless that component is explicitly added in the total economic cost indicator."
   },
   result_total_cost_cohort: {
     title: "Total economic cost per cohort",
     body:
-      "Economic cost concept used for benefit cost calculations. It equals programme cost per cohort plus opportunity cost of trainee time when that component is switched on. Higher values increase the cost base that benefits must exceed to generate ratios above one."
+      "Economic cost for one cohort used in benefit cost and net benefit calculations. Calculated as programme cost per cohort plus the opportunity cost component when the opportunity cost setting is enabled. Opportunity cost is derived from the tier specific combined template rate applied to the programme cost."
   },
   result_net_benefit_cohort: {
-    title: "Net benefit per cohort",
+    title: "Net outbreak benefit per cohort",
     body:
-      "Difference between discounted outbreak related epidemiological benefit per cohort and total economic cost per cohort under current settings. Positive values indicate benefits exceed costs; negative values indicate costs exceed the outbreak benefit under the current outbreak value, planning horizon and discount rate assumptions."
+      "Net benefit comparing outbreak related epidemiological benefits with economic costs for one cohort. Calculated as discounted outbreak benefit per cohort minus total economic cost per cohort. Positive values indicate outbreak related benefits exceed costs under current assumptions."
+  },
+  result_bcr: {
+    title: "Benefit cost ratio per cohort",
+    body:
+      "Ratio of discounted outbreak related epidemiological benefits to total economic costs for one cohort. Calculated as outbreak benefit per cohort divided by total economic cost per cohort. Values above 1 indicate outbreak benefits exceed costs under current assumptions."
   },
   result_graduates: {
-    title: "Graduates (all cohorts)",
+    title: "Graduates",
     body:
-      "Expected number of graduates across all cohorts after applying completion rates and the endorsement share. It is computed from trainees per cohort times completion rate times endorsement share, multiplied by the number of cohorts. It reflects the scale of trained field epidemiologists produced under the configuration."
+      "Expected number of graduates produced across all configured cohorts, adjusted for completion and endorsement. Calculated from trainees per cohort, the tier completion rate, the endorsement share, and the number of cohorts. Higher values indicate a larger trained workforce output under the configured scale up."
   },
   result_outbreak_responses: {
     title: "Outbreak responses per year",
     body:
-      "Expected outbreak responses per year at the configured scale, based on graduates, assumed outbreaks handled per graduate per year, and the response time multiplier. Faster response time increases the credited outbreak responses through the multiplier."
+      "Expected outbreak responses per year at the configured scale, based on graduates and assumptions about outbreaks handled per graduate per year. Calculated using the effective graduates, the outbreaks per graduate per year setting, and the response time multiplier for the selected response time. Higher values increase estimated outbreak related benefits."
+  },
+  result_epi_benefit: {
+    title: "Outbreak related benefit per cohort",
+    body:
+      "Discounted outbreak related epidemiological benefit for one cohort over the planning horizon. Calculated from expected outbreak responses per year, value per outbreak, and the present value factor implied by the discount rate and planning horizon. This is an indicative monetary benefit driven by settings and assumptions."
+  },
+
+  national_total_cost: {
+    title: "Total economic cost",
+    body:
+      "Total economic cost across all configured cohorts over the planning horizon. Calculated as total economic cost per cohort multiplied by the number of cohorts. Interpreted as the aggregate economic resource requirement under the current configuration and cost settings."
+  },
+  national_total_benefit: {
+    title: "Total outbreak related benefit",
+    body:
+      "Total discounted outbreak related epidemiological benefit aggregated across all configured cohorts. Calculated as outbreak benefit per cohort multiplied by the number of cohorts. This depends on the outbreak value, discount rate, planning horizon, and assumptions about outbreak responses."
+  },
+  national_net_benefit: {
+    title: "National net benefit",
+    body:
+      "Net outbreak related benefit at national scale. Calculated as total outbreak related benefit across all cohorts minus total economic cost across all cohorts. Positive values indicate outbreak benefits exceed costs at scale under current assumptions."
+  },
+  national_bcr: {
+    title: "National benefit cost ratio",
+    body:
+      "National scale benefit cost ratio comparing total outbreak related benefits with total economic costs across all cohorts. Calculated as total outbreak related benefit divided by total economic cost. Values above 1 indicate benefits exceed costs at scale under current assumptions."
+  },
+  national_total_wtp: {
+    title: "Total WTP",
+    body:
+      "Total indicative willingness to pay aggregated across all configured cohorts. Calculated as total WTP per cohort multiplied by the number of cohorts. This is an implied value measure from the preference model, not a financial budget."
+  },
+  national_graduates: {
+    title: "Total graduates",
+    body:
+      "Total expected graduates across all configured cohorts, adjusted for completion and endorsement. Calculated by aggregating cohort level graduate outputs across cohorts. Higher values reflect larger workforce scale up under the configured programme."
   },
   national_outbreaks_per_year: {
-    title: "Outbreak responses per year (national)",
+    title: "Outbreak responses per year",
     body:
-      "Aggregate outbreak responses per year implied by all graduates across all cohorts, adjusted by the response time multiplier. It is a model based output dependent on outbreaks per graduate per year and the response time multiplier."
+      "Expected outbreak responses per year at national scale, aggregating the cohort level implied outbreak responses. This depends on graduate outputs, outbreaks per graduate per year, and the response time multiplier. Higher values increase estimated outbreak related benefits."
   }
 });
 
