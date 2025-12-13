@@ -521,15 +521,6 @@ button:disabled,
     border-color: rgba(15, 23, 42, 0.08);
 }
 
-/* Keep tooltip positioning stable by avoiding transformed containing blocks while hovering tooltip triggers */
-@supports(selector(:has(*))) {
-    .card:hover:has(.info-icon:hover),
-    .card:hover:has(.info-icon:focus-visible),
-    .card:hover:has(.tooltip-bubble) {
-        transform: none;
-    }
-}
-
 .card-secondary {
     background-color: #F9FAFB;
     box-shadow: var(--shadow-soft);
@@ -975,22 +966,27 @@ input[type="range"]::-moz-range-thumb {
     cursor: pointer;
     flex-shrink: 0;
     position: relative;
-    top: 0;
     transition:
         background-color var(--transition-fast),
         border-color var(--transition-fast),
-        box-shadow var(--transition-fast),
-        top var(--transition-fast);
+        transform var(--transition-fast),
+        box-shadow var(--transition-fast);
 }
 
 .info-icon:hover {
     background-color: #F3F4F6;
     border-color: var(--color-border-strong);
-    top: -0.5px;
+    transform: translateY(-0.5px);
     box-shadow: var(--shadow-soft);
 }
 
-/* Tooltip bubble (injected by JS) */
+/* Tooltip triggers (contract) */
+
+.tooltip-trigger {
+    cursor: help;
+}
+
+/* Tooltip bubble (legacy, injected by JS) */
 
 .tooltip-bubble {
     position: fixed;
@@ -1000,12 +996,11 @@ input[type="range"]::-moz-range-thumb {
     font-size: 12px;
     padding: 8px 10px;
     border-radius: 8px;
-    z-index: 120;
+    z-index: 80;
     box-shadow: var(--shadow-medium);
     opacity: 1;
     transform: translateY(0);
     pointer-events: auto;
-    word-break: break-word;
     transition:
         opacity var(--transition-fast),
         transform var(--transition-fast);
@@ -1042,6 +1037,54 @@ input[type="range"]::-moz-range-thumb {
 
 .tooltip-bubble.bottom .tooltip-arrow {
     top: -4px;
+}
+
+/* Global tooltip system (contract) */
+
+#globalTooltip {
+    position: fixed;
+    max-width: 320px;
+    background-color: #111827;
+    color: #F9FAFB;
+    font-size: 12px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    z-index: 89;
+    box-shadow: var(--shadow-medium);
+    opacity: 0;
+    transform: translateY(4px);
+    pointer-events: none;
+    transition:
+        opacity var(--transition-fast),
+        transform var(--transition-fast);
+}
+
+#globalTooltip.tooltip-visible {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+#globalTooltip.tooltip-hidden {
+    opacity: 0;
+    transform: translateY(4px);
+    pointer-events: none;
+}
+
+#globalTooltip .tooltip-title {
+    margin: 0 0 4px 0;
+    font-weight: 600;
+    font-size: 12px;
+    color: #F9FAFB;
+}
+
+#globalTooltip .tooltip-body {
+    margin: 0;
+    color: #F9FAFB;
+}
+
+#globalTooltip p {
+    margin: 0;
 }
 
 /* ===========================
@@ -1481,14 +1524,6 @@ canvas {
    Toast
    =========================== */
 
-.toast-container {
-    position: fixed;
-    right: 16px;
-    bottom: 16px;
-    z-index: 95;
-    pointer-events: none;
-}
-
 .toast {
     position: fixed;
     right: 16px;
@@ -1526,6 +1561,63 @@ canvas {
 }
 
 .toast-error {
+    background-color: var(--color-danger);
+}
+
+/* Toast container system (contract) */
+
+#toastContainer {
+    position: fixed;
+    right: 16px;
+    bottom: 16px;
+    z-index: 95;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-end;
+    pointer-events: none;
+}
+
+#toastContainer .toast-message {
+    min-width: 260px;
+    max-width: 360px;
+    background-color: #111827;
+    color: #F9FAFB;
+    border-radius: var(--radius-lg);
+    padding: 8px 12px;
+    font-size: 13px;
+    box-shadow: var(--shadow-medium);
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+    transition:
+        opacity var(--transition-fast),
+        transform var(--transition-fast);
+}
+
+#toastContainer .toast-message.show,
+#toastContainer .toast-message.visible {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+#toastContainer .toast-message.toast-hidden,
+#toastContainer .toast-message.hidden {
+    opacity: 0;
+    transform: translateY(10px);
+    pointer-events: none;
+}
+
+#toastContainer .toast-message.toast-success {
+    background-color: var(--color-success);
+}
+
+#toastContainer .toast-message.toast-warning {
+    background-color: var(--color-warning);
+}
+
+#toastContainer .toast-message.toast-error {
     background-color: var(--color-danger);
 }
 
@@ -2269,6 +2361,36 @@ textarea:focus-visible {
     color: var(--color-text-muted);
 }
 
+/* Ensure sensitivity content renders without clipping when used inside PDF export wrapper */
+.pdf-export-wrapper .table-wrapper {
+    overflow: visible;
+}
+
+.pdf-export-wrapper .data-table {
+    min-width: 0;
+    width: 100%;
+    table-layout: fixed;
+}
+
+.pdf-export-wrapper .sensitivity-table {
+    min-width: 0;
+}
+
+.pdf-export-wrapper .data-table thead tr {
+    position: static;
+    top: auto;
+}
+
+.pdf-export-wrapper .data-table th,
+.pdf-export-wrapper .data-table td {
+    white-space: normal;
+    word-break: break-word;
+}
+
+.pdf-export-wrapper #sensitivityTableContainer {
+    overflow: visible;
+}
+
 /* ===========================
    Print styles for exports
    =========================== */
@@ -2281,9 +2403,12 @@ textarea:focus-visible {
     .app-header,
     .tab-bar,
     #toast,
-    #toast-container,
+    #toastContainer,
+    #globalTooltip,
     #tour-overlay,
-    #tour-popover {
+    #tour-popover,
+    .tour-overlay,
+    .tour-popover {
         display: none !important;
     }
 
@@ -2306,31 +2431,26 @@ textarea:focus-visible {
         display: none !important;
     }
 
+    .table-wrapper,
+    #sensitivityTableContainer {
+        overflow: visible !important;
+    }
+
+    .data-table {
+        min-width: 0 !important;
+        width: 100% !important;
+        table-layout: fixed;
+    }
+
+    .data-table thead tr {
+        position: static !important;
+        top: auto !important;
+    }
+
     .data-table th,
     .data-table td {
         border-color: #9CA3AF;
+        white-space: normal !important;
+        word-break: break-word !important;
     }
-}
-/* ===========================
-   HOTFIX v2025-12-13
-   Tooltip visibility and stacking
-   =========================== */
-.tooltip-bubble {
-  position: fixed;
-  z-index: 99999;
-  pointer-events: none;
-}
-
-.tooltip-bubble.tooltip-hidden {
-  opacity: 0;
-  visibility: hidden;
-}
-
-.tooltip-bubble.tooltip-visible {
-  opacity: 1;
-  visibility: visible;
-}
-
-.info-icon {
-  pointer-events: auto;
 }
