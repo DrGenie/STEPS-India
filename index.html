@@ -76,7 +76,7 @@
         <h3>Programme design attributes</h3>
         <div class="attributes-layout">
             <div class="attr-table-card">
-                <div class="attr-table-header">
+                <div class="attr-table-header>
                     <span>Attribute</span>
                     <span>Levels used in the experiment</span>
                     <span>Explanation</span>
@@ -210,7 +210,7 @@
                         Opt out alternative
                         <button type="button"
                                 class="info-icon"
-                                data-tooltip="The preference study included an explicit opt out option where no new FETP training is funded. This forms the benchmark when predicting endorsement in STEPS."
+                                data-tooltip="The preference study included an explicit opt out option where no new FETP training is funded. This forms the benchmark when predicting endorsement in STEPS and is used as the reference category when comparing configurations with investment."
                                 title="Opt out details"
                                 aria-label="Opt out details">i</button>
                     </div>
@@ -227,7 +227,7 @@
                         Cost components
                         <button type="button"
                                 class="info-icon"
-                                data-tooltip="Combined cost components for each tier, covering salary and benefits, travel, training, trainee support and indirect costs including opportunity cost. These are harmonised across WHO, NIE and NCDC submissions."
+                                data-tooltip="Combined cost components for each tier, covering salary and benefits, travel, training, trainee support and indirect costs including opportunity cost. STEPS uses these harmonised components to build programme and economic costs for each configuration."
                                 title="Cost component details"
                                 aria-label="Cost component details">i</button>
                     </div>
@@ -244,7 +244,7 @@
                         Opportunity cost of trainee time
                         <button type="button"
                                 class="info-icon"
-                                data-tooltip="Value of trainee salary time spent in training instead of normal duties, per trainee per month. When the opportunity cost toggle is on, this is added to programme cost."
+                                data-tooltip="Value of trainee salary time spent in training instead of normal duties, per trainee per month. When the opportunity cost toggle is on, STEPS adds this component to programme costs to form total economic cost."
                                 title="Opportunity cost details"
                                 aria-label="Opportunity cost details">i</button>
                     </div>
@@ -261,7 +261,7 @@
                         Preference model
                         <button type="button"
                                 class="info-icon"
-                                data-tooltip="Mixed logit preference model estimated from the preference study. Mixed logit allows preference coefficients to vary across stakeholders and underpins endorsement and WTP calculations in STEPS."
+                                data-tooltip="Mixed logit preference model estimated from the preference study. Mixed logit allows preference coefficients to vary across stakeholders and underpins endorsement and WTP calculations in STEPS for each configuration."
                                 title="Preference model details"
                                 aria-label="Preference model details">i</button>
                     </div>
@@ -1489,7 +1489,8 @@
                         <textarea id="copilot-prompt-output"
                                   rows="18"
                                   readonly>
-Apply a configuration in STEPS and click "Open in Copilot and copy prompt" to generate the full interpretation prompt and scenario JSON. The text will appear here and will be ready to paste into Microsoft Copilot at https://copilot.microsoft.com/
+
+                Apply a configuration in STEPS and click "Open in Copilot and copy prompt" to generate the full interpretation prompt and scenario JSON. The text will appear here and will be ready to paste into Microsoft Copilot at https://copilot.microsoft.com/
 . When the Copilot page opens in a new window, paste the entire prompt into the Copilot input box and run it.
 </textarea>
 </div>
@@ -1501,7 +1502,8 @@ Waiting for configuration
 The Copilot interpretation text shown here is based on the most recent configuration and results. After changing the scenario, click the button above again so that the text is updated.
 </span>
 </div>
-                </div>
+</div>
+
                                 <div class="copilot-actions">
                     <span class="copilot-actions-text">
                         Open Microsoft Copilot in a separate tab, paste the copied text and run it to obtain a three to five page policy brief with tables and commentary on endorsement, WTP, costs, epidemiological benefits, benefit cost ratios and net benefits.
@@ -1579,4 +1581,6 @@ The Copilot interpretation text shown here is based on the most recent configura
         </div>
     </div>
 </section>
-</main> <!-- Toast container for bottom right pop up messages used across the tool --> <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="true"></div> <script src="script.js"></script> </body> </html>
+
+    </main> <!-- Toast container for bottom right pop up messages used across the tool --> <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="true"></div> <script src="script.js"></script> </body> </html>
+    
