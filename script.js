@@ -304,6 +304,54 @@ const TOOLTIP_LIBRARY = {
     title: "Total willingness to pay (national)",
     body:
       "Aggregate willingness to pay across all cohorts implied by the preference model. It equals willingness to pay per cohort multiplied by the number of cohorts. It summarises model implied value and should be interpreted alongside epidemiological and costing outputs."
+  },
+
+  /* Monitoring & Evaluation tab tooltips */
+
+  mande_framework: {
+    title: "Monitoring and evaluation framework",
+    body:
+      "Theory of Change based monitoring and evaluation framework for FETPs that links inputs, activities, outputs, outcomes and impacts across trainees, graduates, the public health system and communities. It provides the backbone for India’s FETP expansion monitoring plan."
+  },
+  mande_kirkpatrick_levels: {
+    title: "Kirkpatrick evaluation levels",
+    body:
+      "Kirkpatrick’s four levels of evaluation: reaction (participants’ views on training), learning (knowledge and skills gained), behaviour (changes in workplace practice) and results (organisational and system benefits). The FETP framework aligns indicators to each level."
+  },
+  mande_levels_of_change: {
+    title: "Levels of change",
+    body:
+      "Four linked levels of change for FETPs: trainees, graduates, public health system and community. Trainee and graduate outputs feed into system level strengthening, which in turn contributes to better population health outcomes."
+  },
+  mande_outputs_outcomes_impacts: {
+    title: "Outputs, outcomes and impacts",
+    body:
+      "Outputs are the immediate products of FETP activities such as investigations and reports. Outcomes are short and medium term changes such as improved performance and workforce integration. Impacts are longer term system and community level effects, including stronger public health systems and better health outcomes."
+  },
+  mande_indicator_set: {
+    title: "FETP indicator set",
+    body:
+      "Consensus based indicator set from global FETP experts covering outputs, outcomes and impacts. India will select a priority subset to track training delivery, graduate performance, system changes and health impacts in a way that complements STEPS economic outputs."
+  },
+  mande_routine_monitoring: {
+    title: "Routine monitoring",
+    body:
+      "Continuous tracking of key output and outcome indicators using FETP management information systems, trainee records and standard reporting templates. Routine monitoring checks that scale up is on track and that basic quality standards are maintained as the number of cohorts increases."
+  },
+  mande_impact_evaluation: {
+    title: "Periodic impact evaluation",
+    body:
+      "Periodic, usually multi year, evaluations that examine higher level system and population impacts. These assessments look at whether FETP scale up has strengthened surveillance, outbreak response and the use of epidemiological evidence, and whether this has translated into measurable health gains."
+  },
+  mande_alignment_steps: {
+    title: "Alignment with STEPS",
+    body:
+      "The monitoring and evaluation framework is aligned with the epidemiological benefit parameters used in STEPS, such as outbreaks investigated and timeliness of response. This allows triangulation between modelled benefits in STEPS and observed system and health changes over time."
+  },
+  mande_adaptive_improvement: {
+    title: "Adaptive program improvement",
+    body:
+      "Using monitoring and evaluation data to adapt FETP design and scale. Output and outcome data support day to day programme management, while periodic impact evaluations inform strategic decisions about investment, targeting and sustainability."
   }
 };
 
@@ -557,49 +605,32 @@ function normalisedOutbreakValueKeysFromOption(optionEl) {
   return keys;
 }
 
-/* UPGRADED: ensure outbreak dropdown options are numerically ordered */
-
 function ensureSelectHasOutbreakPresets(selectEl) {
   if (!selectEl) return;
 
-  const hadAnyOptions = selectEl.options && selectEl.options.length > 0;
+  const existingValues = new Set();
+  const hasAnyOptions = selectEl.options && selectEl.options.length > 0;
 
-  const optionMap = new Map();
-
-  const existingOptions = Array.from(selectEl.options || []);
-  existingOptions.forEach((opt) => {
-    const inr =
-      parseSensitivityValueToINR(opt.value) ||
-      parseSensitivityValueToINR(opt.textContent || "");
-    if (!inr || !isFinite(inr) || inr <= 0) return;
-    const key = String(inr);
-    if (!optionMap.has(key)) {
-      optionMap.set(key, opt);
-    }
+  Array.from(selectEl.options).forEach((o) => {
+    normalisedOutbreakValueKeysFromOption(o).forEach((k) => existingValues.add(String(k)));
   });
 
   OUTBREAK_VALUE_PRESETS_MN.forEach((mn) => {
-    const inr = mn * 1e6;
-    const key = String(inr);
-    if (!optionMap.has(key)) {
-      const opt = document.createElement("option");
-      opt.value = String(mn);
-      opt.textContent = formatOutbreakPresetLabelMn(mn);
-      optionMap.set(key, opt);
-    }
+    const mnValue = String(mn);
+    const inrValue = String(mn * 1e6);
+
+    if (existingValues.has(mnValue) || existingValues.has(inrValue)) return;
+
+    const opt = document.createElement("option");
+    opt.value = mnValue;
+    opt.textContent = formatOutbreakPresetLabelMn(mn);
+    selectEl.appendChild(opt);
+
+    existingValues.add(mnValue);
+    existingValues.add(inrValue);
   });
 
-  const sortedKeys = Array.from(optionMap.keys()).sort(
-    (a, b) => Number(a) - Number(b)
-  );
-
-  selectEl.innerHTML = "";
-  sortedKeys.forEach((key) => {
-    const opt = optionMap.get(key);
-    if (opt) selectEl.appendChild(opt);
-  });
-
-  if (!hadAnyOptions && selectEl.options && selectEl.options.length) {
+  if (!hasAnyOptions && selectEl.options && selectEl.options.length) {
     const currentInr = appState.epiSettings.tiers.frontline.valuePerOutbreak;
     setSelectToOutbreakValue(selectEl, currentInr);
   }
@@ -639,8 +670,7 @@ function setSelectToOutbreakValue(selectEl, valueInINR) {
   let bestDist = Infinity;
 
   options.forEach((opt) => {
-    const inr =
-      parseSensitivityValueToINR(opt.value) || parseSensitivityValueToINR(opt.textContent);
+    const inr = parseSensitivityValueToINR(opt.value) || parseSensitivityValueToINR(opt.textContent);
     if (!inr || !isFinite(Number(inr))) return;
     const d = Math.abs(Number(inr) - target);
     if (d < bestDist) {
@@ -789,7 +819,18 @@ function ensureContractTooltipTriggers() {
     ["natsim-bcr-info", "national_bcr"],
     ["natsim-graduates-info", "national_graduates"],
     ["natsim-outbreaks-info", "national_outbreaks"],
-    ["natsim-total-wtp-info", "national_total_wtp"]
+    ["natsim-total-wtp-info", "national_total_wtp"],
+
+    /* Monitoring & Evaluation tab info icons (if present in HTML) */
+    ["mande-framework-info", "mande_framework"],
+    ["mande-kirkpatrick-info", "mande_kirkpatrick_levels"],
+    ["mande-levels-info", "mande_levels_of_change"],
+    ["mande-outputs-info", "mande_outputs_outcomes_impacts"],
+    ["mande-indicators-info", "mande_indicator_set"],
+    ["mande-monitoring-info", "mande_routine_monitoring"],
+    ["mande-impact-info", "mande_impact_evaluation"],
+    ["mande-alignment-info", "mande_alignment_steps"],
+    ["mande-adaptive-info", "mande_adaptive_improvement"]
   ];
 
   requiredIdKeyPairs.forEach(([id, key]) => {
@@ -1053,6 +1094,20 @@ function initDefinitionTooltips() {
   if (copilotText) {
     copilotText.textContent =
       "Define a scenario in the other tabs, then use this Copilot tab to generate a draft policy brief. Copy the prepared prompt into Microsoft Copilot and refine the brief there.";
+  }
+
+  /* Optional helper tooltips for Monitoring & Evaluation tab (if used as simple data-tooltips) */
+
+  const mandeHeadline = document.getElementById("mande-headline-info");
+  if (mandeHeadline) {
+    mandeHeadline.classList.add("tooltip-trigger");
+    if (!mandeHeadline.getAttribute("data-tooltip-key")) {
+      mandeHeadline.setAttribute(
+        "data-tooltip",
+        "This tab summarises how India can monitor and evaluate the impact of FETP scale up using a theory driven framework aligned with STEPS outputs."
+      );
+    }
+    mandeHeadline.removeAttribute("title");
   }
 }
 
