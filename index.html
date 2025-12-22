@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -45,7 +46,7 @@
                 aria-expanded="false"
                 data-tour-step="start-tour"
                 data-tour-title="Quick guided tour"
-                data-tour-content="Click here for a short guided tour of the STEPS interface, moving through the main tabs and panels, including the monitoring and evaluation view, WTP-based benefits and sensitivity.">
+                data-tour-content="Click here for a short guided tour of the STEPS interface, moving through the main tabs and panels, including the WTP-based benefits and sensitivity view.">
             <span class="tour-icon">?</span>
             Quick tour
         </button>
@@ -65,7 +66,7 @@
     <nav class="tab-bar"
          data-tour-step="tabs"
          data-tour-title="Navigation tabs"
-         data-tour-content="Use these tabs to move between configuration, results, costing, national simulation, monitoring and evaluation, WTP-based benefits and sensitivity, Copilot briefing, saved scenarios, settings and attributes.">
+         data-tour-content="Use these tabs to move between configuration, results, costing, national simulation, WTP-based benefits and sensitivity, Copilot briefing, saved scenarios and settings.">
         <button class="tab-link tablink active" data-tab="introTab" type="button">Introduction</button>
         <button class="tab-link tablink" data-tab="attributesTab" type="button">Attributes and levels</button>
         <button class="tab-link tablink" data-tab="settingsTab" type="button">Settings</button>
@@ -73,7 +74,7 @@
         <button class="tab-link tablink" data-tab="resultsTab" type="button">Results</button>
         <button class="tab-link tablink" data-tab="costingTab" type="button">Costing details</button>
         <button class="tab-link tablink" data-tab="nationalSimulationTab" type="button">National simulation</button>
-        <button class="tab-link tablink" data-tab="mandETab" type="button">Monitoring and evaluation</button>
+        <button class="tab-link tablink" data-tab="tab-me" type="button">Monitoring &amp; Evaluation</button>
         <button class="tab-link tablink" data-tab="sensitivityTab" type="button">WTP-based benefits / Sensitivity</button>
         <button class="tab-link tablink" data-tab="copilotTab" type="button">Copilot briefing</button>
         <button class="tab-link tablink" data-tab="scenariosTab" type="button">Saved scenarios</button>
@@ -95,7 +96,9 @@
                     <li>Preferences and willingness to pay (WTP) estimates from a preference study using a discrete choice experiment with stakeholders.</li>
                     <li>Cost components and templates that combine submissions from WHO, NIE and NCDC for Frontline, Intermediate and Advanced programmes into a single structure for each tier.</li>
                     <li>Simple epidemiological multipliers that translate training scale up and faster outbreak response into indicative health benefits.</li>
+
                 </ul>
+                </ol>
                 <p class="note">
                     WTP is the approximate rupee value stakeholders in the preference study place on a configuration. Mixed logit is a regression model that allows these preference weights to vary across stakeholders.
                 </p>
@@ -111,7 +114,7 @@
                     <li>Use <strong>View results summary</strong> to open a concise scenario summary.</li>
                     <li>Save promising scenarios in the <strong>Saved scenarios</strong> tab and download them as
                         Excel or a policy brief PDF for reporting and documentation.</li>
-                    <li>For sensitivity checks, use the <strong>National simulation</strong>, <strong>Monitoring and evaluation</strong> and
+                    <li>For sensitivity checks, use the <strong>National simulation</strong> and
                         <strong>WTP-based benefits / Sensitivity</strong> tabs to see how results change with cohorts,
                         endorsement and benefit definitions, and use the <strong>Settings</strong> tab to adjust
                         multipliers.
@@ -362,7 +365,7 @@
                 <h2>Settings and key assumptions</h2>
                 <p>
                     Use this panel to adjust core multipliers for this browser session. Changes feed into the Results,
-                    National simulation, Monitoring and evaluation and WTP-based benefits / Sensitivity tabs.
+                    National simulation and WTP-based benefits / Sensitivity tabs.
                 </p>
                 <p class="note">
                     Use these settings when aligning STEPS with updated national estimates or partner discussions. You can change the
@@ -393,7 +396,7 @@
                                         class="info-icon tooltip-trigger"
                                         data-tooltip-key="settings_value_per_outbreak"
                                         aria-label="Value per outbreak information"
-                                        data-tooltip="Indicative monetary cost saving used for each large outbreak averted or substantially reduced in the core epidemiological benefit calculation. Default is ₹4 million, representing a conservative estimate for a large outbreak averted or substantially reduced under FETP-relevant assumptions. Sensitivity analysis can explore lower and higher values, including severe pandemic scenarios."
+                                        data-tooltip="Indicative monetary cost saving used for each large outbreak averted or substantially reduced in the core epidemiological benefit calculation. Default is ₹4 million, representing an estimate for outbreak averted. Sensitivity analysis can explore lower and higher values, including severe pandemic scenarios."
                                         title="Value per outbreak information">
                                     i
                                 </button>
@@ -813,7 +816,7 @@
                 <hr class="divider">
                 <div class="config-endorsement-row">
                     <div class="config-endorsement-label">
-                        <span class="metric-label config-endorsement-label-text tooltip-trigger" data-tooltip-key="result_endorsement" tabindex="0">Endorsement (current model)</span>
+                        <span class="metric-label tooltip-trigger" data-tooltip-key="result_endorsement" tabindex="0">Endorsement (current model)</span>
                         <button type="button"
                                 class="info-icon tooltip-trigger"
                                 data-tooltip-key="result_endorsement"
@@ -1158,7 +1161,7 @@
                 have selected. 
                 To see how results change, adjust cost, cohort size, number of cohorts or the epidemiological
                 multipliers in the Settings tab and explore the WTP-based benefits and outbreak benefit definitions in the
-                Monitoring and evaluation and WTP-based benefits / Sensitivity tabs.
+                WTP-based benefits / Sensitivity tab.
             </p>
             <div class="grid-two">
                 <div class="natsim-column">
@@ -1284,93 +1287,54 @@
         </div>
     </section>
 
-    <!-- MONITORING AND EVALUATION TAB -->
-    <section id="mandETab" class="tab-panel tabcontent">
-        <div class="grid-two-stretch"
-             data-tour-step="mande"
-             data-tour-title="Monitoring and evaluation"
-             data-tour-content="This view links STEPS scenarios to a monitoring and evaluation framework, clarifying inputs, outputs, outcomes and indicators that can be tracked during implementation.">
-            <div class="card">
+    <!-- MONITORING & EVALUATION TAB -->
+    <section id="tab-me" class="tab-panel tabcontent">
+        <div class="card"
+             data-tour-step="me"
+             data-tour-title="Monitoring and evaluation framework"
+             data-tour-content="This tab links the STEPS configuration and national simulation outputs to a simple results chain and core indicators for FETP monitoring and evaluation.">
+            <div class="card-header-with-info">
                 <h2>Monitoring and evaluation framework</h2>
-                <p>
-                    This tab provides a structured way to translate STEPS results into a monitoring and evaluation (M&amp;E)
-                    plan for FETP scale up. It links programme inputs and activities to outputs, outcomes and longer term
-                    impacts that ministries and partners may wish to track.
-                </p>
-                <p class="note">
-                    Use this framework when preparing FETP implementation plans, logframes and results frameworks. It is designed to be consistent with the costing, epidemiological and WTP-based outputs in the other tabs.
-                </p>
-
-                <div class="table-wrapper">
-                    <table class="data-table">
-                        <thead>
-                        <tr>
-                            <th>M&amp;E level</th>
-                            <th>Example indicator</th>
-                            <th>How STEPS helps</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <tr>
-                            <td>Inputs</td>
-                            <td>Total economic cost by tier and configuration</td>
-                            <td>Use the <strong>Costing</strong> and <strong>National simulation</strong> tabs to report financial and economic costs for the selected scale up option.</td>
-                        </tr>
-                        <tr>
-                            <td>Activities</td>
-                            <td>Number of cohorts launched, mentorship arrangements and delivery mode</td>
-                            <td>Use the <strong>Configuration</strong> tab to document planned cohorts, mentorship intensity and delivery mode, and export scenarios for implementation plans.</td>
-                        </tr>
-                        <tr>
-                            <td>Outputs</td>
-                            <td>Number of trainees enrolled and graduated, by tier and state</td>
-                            <td>Combine STEPS graduate projections with routine FETP reporting to track whether actual enrolments and completions match the scenario assumptions.</td>
-                        </tr>
-                        <tr>
-                            <td>Outcomes</td>
-                            <td>Outbreak responses supported per year and response time achieved</td>
-                            <td>Use epidemiological outputs and outbreak response assumptions from STEPS as a benchmark, then update with real time surveillance and response data.</td>
-                        </tr>
-                        <tr>
-                            <td>Impacts</td>
-                            <td>Approximate outbreak related cost savings and health gains</td>
-                            <td>Use STEPS benefit–cost summaries as indicative values for the results framework and refine them with country specific evaluations over time.</td>
-                        </tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <p class="hint">
-                    Indicators can be expanded or adapted to country reporting systems. STEPS does not replace detailed M&amp;E plans; it provides a coherent starting point anchored in the scale up scenarios.
-                </p>
+                <button type="button"
+                        class="info-icon tooltip-trigger"
+                        data-tooltip-key="me_framework_info"
+                        aria-label="Monitoring and evaluation framework information"
+                        data-tooltip="This view summarises the results chain for FETP scale up and reports a small set of core indicators that use STEPS outputs as forward looking targets for monitoring and evaluation."
+                        title="Monitoring and evaluation framework information">
+                    i
+                </button>
             </div>
 
-            <div class="card card-secondary">
-                <h2>Monitoring and evaluation flow chart</h2>
-                <p>
-                    The schematic below summarises how STEPS fits into a broader monitoring and evaluation cycle, from
-                    configuration and costing through to reporting and periodic updates.
-                </p>
-                <div class="mande-flowchart-panel">
-                    <p class="hint">
-                        A stand alone flow chart can be exported from the technical appendix or supporting materials and inserted here as an image
-                        (for example in PNG or SVG format) to align with World Bank or ministry templates.
-                    </p>
-                    <div class="mande-flowchart-placeholder">
-                        <p><strong>STEPS monitoring and evaluation pathway</strong></p>
-                        <p>
-                            Configuration → Costing and WTP → Epidemiological outputs →
-                            National simulation → M&amp;E indicators → Reporting to ministries and partners →
-                            Settings and scenario updates → Revised configurations
-                        </p>
-                    </div>
-                </div>
-                <p class="note">
-                    When implementing STEPS in a country context, ministries and partners can use this flow to
-                    define when M&amp;E data are collected, who is responsible, and how results are fed back into the
-                    configuration and scaling decisions.
-                </p>
+            <p class="hint">
+                The M&amp;E framework starts from a simple results chain for FETP scale up (inputs, activities, outputs, capacity and impact)
+                and links it to core indicators. STEPS scenario outputs provide the forward looking targets for these indicators.
+            </p>
+
+            <div id="me-logic-model" class="me-logic-model">
+                <!-- Filled dynamically from script.js: short narrative logic model (and optional flowchart image) -->
             </div>
+
+            <div id="me-indicators-table" class="me-indicators-table">
+                <!-- Filled dynamically from script.js: indicator logframe table -->
+            </div>
+
+            <div id="me-notes" class="me-notes">
+                <!-- Filled dynamically from script.js: narrative notes on using STEPS outputs as M&E targets -->
+            </div>
+
+            <div class="button-row">
+                <button id="me-export-excel" type="button" class="btn-secondary-small">
+                    Export M&amp;E logframe (Excel)
+                </button>
+                <button id="me-export-pdf" type="button" class="btn-secondary-small">
+                    Export M&amp;E summary (PDF)
+                </button>
+            </div>
+
+            <p class="hint">
+                The planned values shown in the indicator table can be treated as targets in national FETP monitoring and evaluation plans.
+                Routine programme and surveillance data can then be used to track actual values over time and compare them with the STEPS scenario.
+            </p>
         </div>
     </section>
 
@@ -1538,7 +1502,7 @@
                             class="info-icon tooltip-trigger"
                             data-tooltip-key="sensitivity_headline_info"
                             aria-label="Headline WTP-based benefits information"
-                            data-tooltip="In this table, the cost column shows the relevant economic cost for each scenario over the selected time horizon. Total economic cost and net benefit columns report values aggregated across all cohorts in millions of rupees. Total WTP benefits summarise how much value stakeholders place on each configuration, while the outbreak response column isolates the part of that value linked to faster detection and response. Epidemiological outbreak benefits appear when the outbreak benefit switch is on and the epidemiological module is active. The effective WTP benefit scales total WTP by the endorsement rate used in the calculation. Benefit cost ratios compare total benefits with total costs, while net present values show the difference between benefits and costs in rupee terms. Values above one for benefit cost ratios and positive net present values indicate that estimated benefits exceed costs on the assumptions used."
+                            data-tooltip="In this table, the cost column shows the relevant economic cost for each scenario over the selected time horizon. Total economic cost and net benefit columns report values aggregated across all cohorts in millions of rupees. Total WTP benefits summarise how much value stakeholders place on each configuration, while the outbreak response column isolates the part of that value linked to faster detection and response. Epidemiological outbreak benefits appear when the outbreak benefit switch is on and the epidemiological module is active. The effective WTP benefit scales total WTP by the endorsement rate for that scenario. Benefit cost ratios compare total benefits with total costs, while net present values show the difference between benefits and costs in rupee terms. Values above one for benefit cost ratios and positive net present values indicate that estimated benefits exceed costs on the assumptions used."
                             title="Headline WTP-based benefits information">
                         i
                     </button>
@@ -1683,17 +1647,10 @@
                             <textarea id="copilot-prompt-output"
                                       rows="18"
                                       readonly>
-Apply a configuration in STEPS and click "Open in Copilot and copy prompt" to generate the full interpretation prompt and scenario. The text will appear here and will be ready to paste into Microsoft Copilot at [https://copilot.microsoft.com/](https://copilot.microsoft.com/). When the Copilot page opens in a new window, paste the entire prompt into the Copilot input box and run it. </textarea>
-                        </div>
-                        <div class="copilot-status-row">
-                            <span class="copilot-status-pill" id="copilot-status-pill">
-                                Waiting for configuration
-                            </span>
-                            <span id="copilot-status-text">
-                                The Copilot interpretation text shown here is based on the most recent configuration and results. After changing the scenario, click the button above again so that the text is updated.
-                            </span>
-                        </div>
-                    </div>
+
+Apply a configuration in STEPS and click "Open in Copilot and copy prompt" to generate the full interpretation prompt and scenario. The text will appear here and will be ready to paste into Microsoft Copilot at [https://copilot.microsoft.com/](https://copilot.microsoft.com/). When the Copilot page opens in a new window, paste the entire prompt into the Copilot input box and run it. </textarea> </div> <div class="copilot-status-row"> <span class="copilot-status-pill" id="copilot-status-pill">
+Waiting for configuration </span> <span id="copilot-status-text">
+The Copilot interpretation text shown here is based on the most recent configuration and results. After changing the scenario, click the button above again so that the text is updated. </span> </div> </div>
 
                     <div class="copilot-actions">
                         <span class="copilot-actions-text">
