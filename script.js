@@ -1,3 +1,4 @@
+
 /* ===================================================
    STEPS FETP India Decision Aid
    Next generation script with working tooltips,
@@ -141,6 +142,57 @@ const DEFAULT_EPI_SETTINGS = {
     }
   }
 };
+
+/* ===========================
+   Monitoring & Evaluation indicator library
+   =========================== */
+
+const ME_INDICATORS = [
+  {
+    id: "input_budget",
+    level: "Input",
+    name: "Annual FETP budget for this configuration",
+    formula: "Total economic cost across all cohorts divided by planning horizon (INR per year)",
+    dataSource: "STEPS costing plus country budget data",
+    scenarioMapping: (scenario) => {
+      const years = scenario.planningYears || appState.epiSettings.general.planningHorizonYears;
+      const annual = years > 0 ? scenario.natTotalCost / years : scenario.natTotalCost;
+      return annual;
+    }
+  },
+  {
+    id: "output_graduates",
+    level: "Output",
+    name: "Total FETP graduates produced",
+    formula: "Graduates across all cohorts (completion × endorsement × trainees × cohorts)",
+    dataSource: "STEPS epidemiological outputs + FETP registry",
+    scenarioMapping: (scenario) => scenario.graduatesAllCohorts
+  },
+  {
+    id: "outcome_outbreaks",
+    level: "Outcome",
+    name: "Outbreak responses per year (national)",
+    formula: "Graduates × outbreaks per graduate per year × response time multiplier",
+    dataSource: "STEPS epidemiological outputs + national surveillance data",
+    scenarioMapping: (scenario) => scenario.outbreaksPerYearNational
+  },
+  {
+    id: "impact_outbreak_benefit",
+    level: "Impact",
+    name: "Total outbreak-related economic benefit",
+    formula: "Discounted outbreak benefits across all cohorts (INR)",
+    dataSource: "STEPS epidemiological module",
+    scenarioMapping: (scenario) => scenario.epiBenefitAllCohorts
+  },
+  {
+    id: "impact_bcr",
+    level: "Impact",
+    name: "National benefit–cost ratio (outbreak benefits vs economic costs)",
+    formula: "Total outbreak benefit divided by total economic cost",
+    dataSource: "STEPS benefit–cost calculations",
+    scenarioMapping: (scenario) => scenario.natBcr
+  }
+];
 
 /* Response time multipliers for outbreak benefits */
 
@@ -304,54 +356,6 @@ const TOOLTIP_LIBRARY = {
     title: "Total willingness to pay (national)",
     body:
       "Aggregate willingness to pay across all cohorts implied by the preference model. It equals willingness to pay per cohort multiplied by the number of cohorts. It summarises model implied value and should be interpreted alongside epidemiological and costing outputs."
-  },
-
-  /* Monitoring & Evaluation tab tooltips */
-
-  mande_framework: {
-    title: "Monitoring and evaluation framework",
-    body:
-      "Theory of Change based monitoring and evaluation framework for FETPs that links inputs, activities, outputs, outcomes and impacts across trainees, graduates, the public health system and communities. It provides the backbone for India’s FETP expansion monitoring plan."
-  },
-  mande_kirkpatrick_levels: {
-    title: "Kirkpatrick evaluation levels",
-    body:
-      "Kirkpatrick’s four levels of evaluation: reaction (participants’ views on training), learning (knowledge and skills gained), behaviour (changes in workplace practice) and results (organisational and system benefits). The FETP framework aligns indicators to each level."
-  },
-  mande_levels_of_change: {
-    title: "Levels of change",
-    body:
-      "Four linked levels of change for FETPs: trainees, graduates, public health system and community. Trainee and graduate outputs feed into system level strengthening, which in turn contributes to better population health outcomes."
-  },
-  mande_outputs_outcomes_impacts: {
-    title: "Outputs, outcomes and impacts",
-    body:
-      "Outputs are the immediate products of FETP activities such as investigations and reports. Outcomes are short and medium term changes such as improved performance and workforce integration. Impacts are longer term system and community level effects, including stronger public health systems and better health outcomes."
-  },
-  mande_indicator_set: {
-    title: "FETP indicator set",
-    body:
-      "Consensus based indicator set from global FETP experts covering outputs, outcomes and impacts. India will select a priority subset to track training delivery, graduate performance, system changes and health impacts in a way that complements STEPS economic outputs."
-  },
-  mande_routine_monitoring: {
-    title: "Routine monitoring",
-    body:
-      "Continuous tracking of key output and outcome indicators using FETP management information systems, trainee records and standard reporting templates. Routine monitoring checks that scale up is on track and that basic quality standards are maintained as the number of cohorts increases."
-  },
-  mande_impact_evaluation: {
-    title: "Periodic impact evaluation",
-    body:
-      "Periodic, usually multi year, evaluations that examine higher level system and population impacts. These assessments look at whether FETP scale up has strengthened surveillance, outbreak response and the use of epidemiological evidence, and whether this has translated into measurable health gains."
-  },
-  mande_alignment_steps: {
-    title: "Alignment with STEPS",
-    body:
-      "The monitoring and evaluation framework is aligned with the epidemiological benefit parameters used in STEPS, such as outbreaks investigated and timeliness of response. This allows triangulation between modelled benefits in STEPS and observed system and health changes over time."
-  },
-  mande_adaptive_improvement: {
-    title: "Adaptive program improvement",
-    body:
-      "Using monitoring and evaluation data to adapt FETP design and scale. Output and outcome data support day to day programme management, while periodic impact evaluations inform strategic decisions about investment, targeting and sustainability."
   }
 };
 
@@ -819,18 +823,7 @@ function ensureContractTooltipTriggers() {
     ["natsim-bcr-info", "national_bcr"],
     ["natsim-graduates-info", "national_graduates"],
     ["natsim-outbreaks-info", "national_outbreaks"],
-    ["natsim-total-wtp-info", "national_total_wtp"],
-
-    /* Monitoring & Evaluation tab info icons (if present in HTML) */
-    ["mande-framework-info", "mande_framework"],
-    ["mande-kirkpatrick-info", "mande_kirkpatrick_levels"],
-    ["mande-levels-info", "mande_levels_of_change"],
-    ["mande-outputs-info", "mande_outputs_outcomes_impacts"],
-    ["mande-indicators-info", "mande_indicator_set"],
-    ["mande-monitoring-info", "mande_routine_monitoring"],
-    ["mande-impact-info", "mande_impact_evaluation"],
-    ["mande-alignment-info", "mande_alignment_steps"],
-    ["mande-adaptive-info", "mande_adaptive_improvement"]
+    ["natsim-total-wtp-info", "national_total_wtp"]
   ];
 
   requiredIdKeyPairs.forEach(([id, key]) => {
@@ -1094,20 +1087,6 @@ function initDefinitionTooltips() {
   if (copilotText) {
     copilotText.textContent =
       "Define a scenario in the other tabs, then use this Copilot tab to generate a draft policy brief. Copy the prepared prompt into Microsoft Copilot and refine the brief there.";
-  }
-
-  /* Optional helper tooltips for Monitoring & Evaluation tab (if used as simple data-tooltips) */
-
-  const mandeHeadline = document.getElementById("mande-headline-info");
-  if (mandeHeadline) {
-    mandeHeadline.classList.add("tooltip-trigger");
-    if (!mandeHeadline.getAttribute("data-tooltip-key")) {
-      mandeHeadline.setAttribute(
-        "data-tooltip",
-        "This tab summarises how India can monitor and evaluate the impact of FETP scale up using a theory driven framework aligned with STEPS outputs."
-      );
-    }
-    mandeHeadline.removeAttribute("title");
   }
 }
 
@@ -1844,6 +1823,144 @@ function initApplySettingsButton() {
 }
 
 /* ===========================
+   Monitoring & Evaluation tab
+   =========================== */
+
+function updateMETab(scenario) {
+  const logicDiv = document.getElementById("me-logic-model");
+  const tableDiv = document.getElementById("me-indicators-table");
+  const notesDiv = document.getElementById("me-notes");
+  if (!logicDiv || !tableDiv || !notesDiv || !scenario) return;
+
+  const c = scenario.config;
+  const planningYears = scenario.planningYears || appState.epiSettings.general.planningHorizonYears;
+
+  logicDiv.innerHTML = `
+    <p>This monitoring and evaluation framework links the STEPS configuration
+    (tier ${safeText(c.tier)}, ${formatNumber(c.cohorts, 0)} cohorts of ${formatNumber(
+      c.traineesPerCohort,
+      0
+    )} trainees,
+    response within ${safeText(c.response)} days) to indicators that track inputs, outputs,
+    capacity and impact over the ${formatNumber(planningYears, 0)} year planning horizon.</p>
+  `;
+
+  const rows = ME_INDICATORS.map((ind) => {
+    const val = ind.scenarioMapping ? ind.scenarioMapping(scenario) : null;
+    const formatted =
+      ind.id === "impact_bcr"
+        ? (val != null ? formatNumber(val, 2) : "-")
+        : formatCurrencyDisplay(val, 0);
+    return `
+      <tr>
+        <td>${safeText(ind.level)}</td>
+        <td>${safeText(ind.name)}</td>
+        <td>${safeText(ind.formula)}</td>
+        <td>${safeText(ind.dataSource)}</td>
+        <td class="numeric-cell">${formatted}</td>
+      </tr>
+    `;
+  }).join("");
+
+  tableDiv.innerHTML = `
+    <table class="data-table" aria-label="Monitoring and evaluation indicators">
+      <thead>
+        <tr>
+          <th>Level</th>
+          <th>Indicator</th>
+          <th>Definition / formula</th>
+          <th>Main data source</th>
+          <th>Planned value under this scenario</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+
+  notesDiv.textContent =
+    "These planned values can be used as targets in FETP monitoring and evaluation plans. " +
+    "Routine programme and surveillance data should be used to track actual values over time " +
+    "and compare against the targets implied by STEPS scenarios.";
+}
+
+function exportMELogframeToExcel() {
+  if (!window.XLSX) {
+    showToast("Excel export is not available in this browser.", "error");
+    return;
+  }
+  const table = document.querySelector("#me-indicators-table table");
+  if (!table) {
+    showToast("M&E indicators table is not available. Apply a configuration first.", "warning");
+    return;
+  }
+  const wb = XLSX.utils.book_new();
+  const sheet = XLSX.utils.table_to_sheet(table);
+  XLSX.utils.book_append_sheet(wb, sheet, "STEPS M&E logframe");
+  XLSX.writeFile(wb, "steps_me_logframe.xlsx");
+  showToast("M&E logframe Excel file downloaded.", "success");
+}
+
+function exportMELogframeToPdf() {
+  if (!window.jspdf || !window.jspdf.jsPDF) {
+    showToast("PDF export is not available in this browser.", "error");
+    return;
+  }
+  const table = document.querySelector("#me-indicators-table table");
+  if (!table) {
+    showToast("M&E indicators table is not available. Apply a configuration first.", "warning");
+    return;
+  }
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: "landscape" });
+
+  let y = 10;
+  doc.setFontSize(14);
+  doc.text("STEPS FETP India Decision Aid - Monitoring and evaluation logframe", 10, y);
+  y += 10;
+
+  const headRow = table.querySelector("thead tr");
+  const head = [];
+  if (headRow) {
+    head.push(Array.from(headRow.children).map((th) => th.textContent.trim()));
+  }
+
+  const body = [];
+  const bodyRows = table.querySelectorAll("tbody tr");
+  bodyRows.forEach((tr) => {
+    const row = Array.from(tr.children).map((td) => td.textContent.trim());
+    body.push(row);
+  });
+
+  if (doc.autoTable && head.length && body.length) {
+    doc.setFontSize(8);
+    doc.autoTable({
+      head,
+      body,
+      startY: y,
+      styles: { fontSize: 7, cellPadding: 2 },
+      headStyles: { fontSize: 7 },
+      theme: "grid"
+    });
+  } else {
+    doc.setFontSize(9);
+    const text = table.innerText || "";
+    const lines = doc.splitTextToSize(text, doc.internal.pageSize.getWidth() - 20);
+    lines.forEach((line) => {
+      if (y > doc.internal.pageSize.getHeight() - 10) {
+        doc.addPage();
+        y = 10;
+      }
+      doc.text(line, 10, y);
+      y += 10;
+    });
+  }
+
+  doc.save("steps_me_logframe.pdf");
+  showToast("M&E logframe PDF downloaded.", "success");
+}
+
+/* ===========================
    Results and national tabs updates
    =========================== */
 
@@ -2420,7 +2537,7 @@ function exportSensitivityContainerToPdf() {
         body.push(row);
       });
 
-      if (!head.length || !body.length) return;
+     	if (!head.length || !body.length) return;
 
       if (y > pageH - margin - 80) {
         doc.addPage();
@@ -2838,6 +2955,7 @@ function refreshAllOutputs(scenario) {
   updateEpiChart(scenario);
   refreshSensitivityTables();
   refreshSavedScenariosTable();
+  updateMETab(scenario);
   syncOutbreakValueDropdownsFromState();
 }
 
@@ -2977,6 +3095,28 @@ function initEventHandlers() {
     endorsementOverrideInput.addEventListener("change", () => {
       if (!appState.currentScenario) return;
       refreshSensitivityTables();
+    });
+  }
+
+  const meExcelBtn = document.getElementById("me-export-excel");
+  if (meExcelBtn) {
+    meExcelBtn.addEventListener("click", () => {
+      if (!appState.currentScenario) {
+        showToast("Apply a configuration before exporting the M&E logframe.", "warning");
+        return;
+      }
+      exportMELogframeToExcel();
+    });
+  }
+
+  const mePdfBtn = document.getElementById("me-export-pdf");
+  if (mePdfBtn) {
+    mePdfBtn.addEventListener("click", () => {
+      if (!appState.currentScenario) {
+        showToast("Apply a configuration before exporting the M&E summary.", "warning");
+        return;
+      }
+      exportMELogframeToPdf();
     });
   }
 
