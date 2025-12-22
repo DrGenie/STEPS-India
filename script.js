@@ -557,32 +557,49 @@ function normalisedOutbreakValueKeysFromOption(optionEl) {
   return keys;
 }
 
+/* UPGRADED: ensure outbreak dropdown options are numerically ordered */
+
 function ensureSelectHasOutbreakPresets(selectEl) {
   if (!selectEl) return;
 
-  const existingValues = new Set();
-  const hasAnyOptions = selectEl.options && selectEl.options.length > 0;
+  const hadAnyOptions = selectEl.options && selectEl.options.length > 0;
 
-  Array.from(selectEl.options).forEach((o) => {
-    normalisedOutbreakValueKeysFromOption(o).forEach((k) => existingValues.add(String(k)));
+  const optionMap = new Map();
+
+  const existingOptions = Array.from(selectEl.options || []);
+  existingOptions.forEach((opt) => {
+    const inr =
+      parseSensitivityValueToINR(opt.value) ||
+      parseSensitivityValueToINR(opt.textContent || "");
+    if (!inr || !isFinite(inr) || inr <= 0) return;
+    const key = String(inr);
+    if (!optionMap.has(key)) {
+      optionMap.set(key, opt);
+    }
   });
 
   OUTBREAK_VALUE_PRESETS_MN.forEach((mn) => {
-    const mnValue = String(mn);
-    const inrValue = String(mn * 1e6);
-
-    if (existingValues.has(mnValue) || existingValues.has(inrValue)) return;
-
-    const opt = document.createElement("option");
-    opt.value = mnValue;
-    opt.textContent = formatOutbreakPresetLabelMn(mn);
-    selectEl.appendChild(opt);
-
-    existingValues.add(mnValue);
-    existingValues.add(inrValue);
+    const inr = mn * 1e6;
+    const key = String(inr);
+    if (!optionMap.has(key)) {
+      const opt = document.createElement("option");
+      opt.value = String(mn);
+      opt.textContent = formatOutbreakPresetLabelMn(mn);
+      optionMap.set(key, opt);
+    }
   });
 
-  if (!hasAnyOptions && selectEl.options && selectEl.options.length) {
+  const sortedKeys = Array.from(optionMap.keys()).sort(
+    (a, b) => Number(a) - Number(b)
+  );
+
+  selectEl.innerHTML = "";
+  sortedKeys.forEach((key) => {
+    const opt = optionMap.get(key);
+    if (opt) selectEl.appendChild(opt);
+  });
+
+  if (!hadAnyOptions && selectEl.options && selectEl.options.length) {
     const currentInr = appState.epiSettings.tiers.frontline.valuePerOutbreak;
     setSelectToOutbreakValue(selectEl, currentInr);
   }
@@ -622,7 +639,8 @@ function setSelectToOutbreakValue(selectEl, valueInINR) {
   let bestDist = Infinity;
 
   options.forEach((opt) => {
-    const inr = parseSensitivityValueToINR(opt.value) || parseSensitivityValueToINR(opt.textContent);
+    const inr =
+      parseSensitivityValueToINR(opt.value) || parseSensitivityValueToINR(opt.textContent);
     if (!inr || !isFinite(Number(inr))) return;
     const d = Math.abs(Number(inr) - target);
     if (d < bestDist) {
@@ -734,7 +752,6 @@ function showToast(message, type = "info") {
 
 /* ===========================
    Tooltip system (UI contract: #globalTooltip, .tooltip-trigger[data-tooltip-key])
-   Enhanced to work with dynamically added elements
    =========================== */
 
 function ensureContractTooltipTriggers() {
@@ -921,29 +938,13 @@ function initTooltips() {
     appState.tooltip.hideTimeout = setTimeout(hideTooltip, 90);
   }
 
-  function bindTooltipTriggers(root) {
-    const triggers = Array.from((root || document).querySelectorAll(".tooltip-trigger"));
-    triggers.forEach((el) => {
-      if (el.dataset.tooltipBound === "1") return;
-      el.addEventListener("mouseenter", () => onEnter(el));
-      el.addEventListener("mouseleave", (e) => onLeave(el, e.relatedTarget));
-      el.addEventListener("focusin", () => onEnter(el));
-      el.addEventListener("focusout", () => onLeave(el, null));
-      el.dataset.tooltipBound = "1";
-    });
-  }
+  const triggers = Array.from(document.querySelectorAll(".tooltip-trigger"));
 
-  bindTooltipTriggers(document);
-
-  const observer = new MutationObserver(() => {
-    ensureContractTooltipTriggers();
-    bindTooltipTriggers(document);
-  });
-
-  observer.observe(document.body, {
-    childList: true,
-    subtree: true,
-    attributes: false
+  triggers.forEach((el) => {
+    el.addEventListener("mouseenter", () => onEnter(el));
+    el.addEventListener("mouseleave", (e) => onLeave(el, e.relatedTarget));
+    el.addEventListener("focusin", () => onEnter(el));
+    el.addEventListener("focusout", () => onLeave(el, null));
   });
 
   document.addEventListener("keydown", (e) => {
@@ -1860,7 +1861,7 @@ function updateConfigSummary(scenario) {
       statusText = "Promising configuration (needs discussion)";
     } else {
       statusClass = "status-poor";
-      statusText = "Challenging configuration (weaker support and benefit–cost case)";
+      statusText = "Challenging configuration (Less support and the WTP value is below the cost)";
     }
 
     statusTag.classList.add(statusClass);
@@ -2783,7 +2784,6 @@ function refreshAllOutputs(scenario) {
   refreshSensitivityTables();
   refreshSavedScenariosTable();
   syncOutbreakValueDropdownsFromState();
-  ensureContractTooltipTriggers();
 }
 
 function initEventHandlers() {
@@ -2949,7 +2949,4 @@ document.addEventListener("DOMContentLoaded", () => {
   initEventHandlers();
   updateCostSliderLabel();
   updateCurrencyToggle();
-
-  // Expose for debugging if needed
-  window.STEPS_APP_STATE = appState;
 });
