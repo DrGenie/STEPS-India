@@ -1,6 +1,6 @@
 
 /* ===================================================
-   STEPS FETP India Decision Aid
+   STEPS FETP India Decision Aid tool
    Next generation script with working tooltips,
    WTP based benefits, sensitivity, Copilot integration and exports
    =================================================== */
@@ -142,57 +142,6 @@ const DEFAULT_EPI_SETTINGS = {
     }
   }
 };
-
-/* ===========================
-   Monitoring & Evaluation indicator library
-   =========================== */
-
-const ME_INDICATORS = [
-  {
-    id: "input_budget",
-    level: "Input",
-    name: "Annual FETP budget for this configuration",
-    formula: "Total economic cost across all cohorts divided by planning horizon (INR per year)",
-    dataSource: "STEPS costing plus country budget data",
-    scenarioMapping: (scenario) => {
-      const years = scenario.planningYears || appState.epiSettings.general.planningHorizonYears;
-      const annual = years > 0 ? scenario.natTotalCost / years : scenario.natTotalCost;
-      return annual;
-    }
-  },
-  {
-    id: "output_graduates",
-    level: "Output",
-    name: "Total FETP graduates produced",
-    formula: "Graduates across all cohorts (completion × endorsement × trainees × cohorts)",
-    dataSource: "STEPS epidemiological outputs + FETP registry",
-    scenarioMapping: (scenario) => scenario.graduatesAllCohorts
-  },
-  {
-    id: "outcome_outbreaks",
-    level: "Outcome",
-    name: "Outbreak responses per year (national)",
-    formula: "Graduates × outbreaks per graduate per year × response time multiplier",
-    dataSource: "STEPS epidemiological outputs + national surveillance data",
-    scenarioMapping: (scenario) => scenario.outbreaksPerYearNational
-  },
-  {
-    id: "impact_outbreak_benefit",
-    level: "Impact",
-    name: "Total outbreak-related economic benefit",
-    formula: "Discounted outbreak benefits across all cohorts (INR)",
-    dataSource: "STEPS epidemiological module",
-    scenarioMapping: (scenario) => scenario.epiBenefitAllCohorts
-  },
-  {
-    id: "impact_bcr",
-    level: "Impact",
-    name: "National benefit–cost ratio (outbreak benefits vs economic costs)",
-    formula: "Total outbreak benefit divided by total economic cost",
-    dataSource: "STEPS benefit–cost calculations",
-    scenarioMapping: (scenario) => scenario.natBcr
-  }
-];
 
 /* Response time multipliers for outbreak benefits */
 
@@ -1275,6 +1224,7 @@ function getConfigFromForm() {
   const trainees = Number(document.getElementById("trainees").value);
   const cohorts = Number(document.getElementById("cohorts").value);
 
+  // Settings: planning horizon is stored in appState.epiSettings.general
   const planningInput = document.getElementById("planning-horizon");
   let planningHorizonYears = appState.epiSettings.general.planningHorizonYears;
   if (planningInput) {
@@ -1286,9 +1236,54 @@ function getConfigFromForm() {
   appState.epiSettings.general.planningHorizonYears = planningHorizonYears;
 
   const oppIncluded = document.getElementById("opp-toggle").classList.contains("on");
+
   const scenarioName =
     document.getElementById("scenario-name").value.trim() || `${tier} ${mentorship} ${cohorts} cohorts`;
   const scenarioNotes = document.getElementById("scenario-notes").value.trim();
+
+  // NEW: mentor support cost per cohort (base) and feasibility inputs (defensive reads)
+  const mentorBaseEl = document.getElementById("mentor-support-cost-per-cohort");
+  let mentorSupportCostPerCohortBase = 0;
+  if (mentorBaseEl) {
+    const v = Number(mentorBaseEl.value);
+    if (!isNaN(v) && v >= 0) mentorSupportCostPerCohortBase = v;
+  }
+
+  const availableMentorsEl = document.getElementById("available-mentors-national");
+  let availableMentorsNational = 200;
+  if (availableMentorsEl) {
+    const v = Number(availableMentorsEl.value);
+    if (!isNaN(v) && v >= 0) availableMentorsNational = v;
+  }
+
+  const sitesEl = document.getElementById("available-training-sites");
+  let availableTrainingSites = 0;
+  if (sitesEl) {
+    const v = Number(sitesEl.value);
+    if (!isNaN(v) && v >= 0) availableTrainingSites = v;
+  }
+
+  const maxCohortsEl = document.getElementById("max-cohorts-per-site");
+  let maxCohortsPerSitePerYear = 0;
+  if (maxCohortsEl) {
+    const v = Number(maxCohortsEl.value);
+    if (!isNaN(v) && v >= 0) maxCohortsPerSitePerYear = v;
+  }
+
+  const crossSectorEl = document.getElementById("cross-sector-benefit-multiplier");
+  let crossSectorBenefitMultiplier = 1.0;
+  if (crossSectorEl) {
+    const v = Number(crossSectorEl.value);
+    if (!isNaN(v) && v > 0) crossSectorBenefitMultiplier = v;
+  }
+  // Clamp recommended range if provided
+  crossSectorBenefitMultiplier = Math.max(0.8, Math.min(2.0, crossSectorBenefitMultiplier));
+
+  // NEW: optional export notes (persisted into scenarios for briefing/exports)
+  const enablersEl = document.getElementById("export-enablers");
+  const risksEl = document.getElementById("export-risks");
+  const exportEnablers = enablersEl ? (enablersEl.value || "").trim() : "";
+  const exportRisks = risksEl ? (risksEl.value || "").trim() : "";
 
   return {
     tier,
@@ -1303,9 +1298,19 @@ function getConfigFromForm() {
     opportunityCostIncluded: oppIncluded,
     name: scenarioName,
     notes: scenarioNotes,
-    preferenceModel: "Mixed logit model from the preference study"
+    preferenceModel: "Mixed logit model from the preference study",
+
+    // NEW fields
+    mentorSupportCostPerCohortBase,
+    availableMentorsNational,
+    availableTrainingSites,
+    maxCohortsPerSitePerYear,
+    crossSectorBenefitMultiplier,
+    exportEnablers,
+    exportRisks
   };
 }
+
 
 function tierEffect(tier) {
   return MXL_COEFS.tier[tier] || 0;
@@ -1365,12 +1370,26 @@ function computeEndorsementAndWTP(config) {
   };
 }
 
+function mentorshipMultiplier(intensity) {
+  if (String(intensity) === "medium") return 1.3;
+  if (String(intensity) === "high") return 1.7;
+  return 1.0;
+}
+
 function computeCosts(config) {
   const months = TIER_MONTHS[config.tier] || 12;
   const directCostPerTraineePerMonth = config.costPerTraineePerMonth;
   const trainees = config.traineesPerCohort;
 
   const programmeCostPerCohort = directCostPerTraineePerMonth * months * trainees;
+
+  // NEW: mentor support costs (base × mentorship multiplier)
+  const mentorBase = Number(config.mentorSupportCostPerCohortBase || 0);
+  const mentorMult = mentorshipMultiplier(config.mentorship);
+  const mentorCostPerCohort = mentorBase * mentorMult;
+
+  // Direct cost excludes opportunity cost, but includes mentor support costs
+  const directCostPerCohort = programmeCostPerCohort + mentorCostPerCohort;
 
   const templatesForTier = COST_TEMPLATES[config.tier];
   const template =
@@ -1382,16 +1401,31 @@ function computeCosts(config) {
     oppRate = 0;
   }
 
+  // Keep prior behaviour: opportunity cost is applied to programme delivery costs
   const opportunityCost = programmeCostPerCohort * oppRate;
-  const totalEconomicCost = programmeCostPerCohort + opportunityCost;
+
+  const totalEconomicCost = directCostPerCohort + opportunityCost;
+
+  // Convenience totals across all cohorts
+  const totalMentorCostAllCohorts = mentorCostPerCohort * (config.cohorts || 0);
+  const totalDirectCostAllCohorts = directCostPerCohort * (config.cohorts || 0);
+  const totalEconomicCostAllCohorts = totalEconomicCost * (config.cohorts || 0);
 
   return {
     programmeCostPerCohort,
-    totalEconomicCostPerCohort: totalEconomicCost,
+    mentorSupportCostPerCohortBase: mentorBase,
+    mentorCostMultiplier: mentorMult,
+    mentorCostPerCohort,
+    directCostPerCohort,
     opportunityCostPerCohort: opportunityCost,
+    totalEconomicCostPerCohort: totalEconomicCost,
+    totalMentorCostAllCohorts,
+    totalDirectCostAllCohorts,
+    totalEconomicCostAllCohorts,
     template
   };
 }
+
 
 function computeEpidemiological(config, endorseRate) {
   const tierSettings = appState.epiSettings.tiers[config.tier];
@@ -1400,6 +1434,9 @@ function computeEpidemiological(config, endorseRate) {
   const completionRate = tierSettings.completionRate;
   const outbreaksPerGrad = tierSettings.outbreaksPerGraduatePerYear;
   const valuePerOutbreak = tierSettings.valuePerOutbreak;
+
+  // Optional non-outbreak value (per graduate per year); defaults to 0 if not used.
+  const valuePerGraduate = Number(tierSettings.valuePerGraduate || 0);
 
   const planningYears = general.planningHorizonYears;
   const discountRate = general.epiDiscountRate;
@@ -1420,12 +1457,22 @@ function computeEpidemiological(config, endorseRate) {
   const outbreaksPerYearPerCohort = graduatesEffective * outbreaksPerGrad * respMultiplier;
   const outbreaksPerYearNational = outbreaksPerYearPerCohort * config.cohorts;
 
-  const graduateBenefitPerCohort = 0;
+  // Base PV benefits
+  const graduateAnnualBenefitPerCohort = graduatesEffective * valuePerGraduate;
+  const graduateBenefitPerCohort = graduateAnnualBenefitPerCohort * pvFactor;
 
   const outbreakAnnualBenefitPerCohort = outbreaksPerYearPerCohort * valuePerOutbreak;
   const outbreakPVPerCohort = outbreakAnnualBenefitPerCohort * pvFactor;
 
-  const totalEpiBenefitPerCohort = graduateBenefitPerCohort + outbreakPVPerCohort;
+  // NEW: cross-sector / One Health multiplier applied to epidemiological benefits only
+  let crossSectorMultiplier = Number(config.crossSectorBenefitMultiplier || 1.0);
+  if (isNaN(crossSectorMultiplier) || crossSectorMultiplier <= 0) crossSectorMultiplier = 1.0;
+  crossSectorMultiplier = Math.max(0.8, Math.min(2.0, crossSectorMultiplier));
+
+  const graduateBenefitAdj = graduateBenefitPerCohort * crossSectorMultiplier;
+  const outbreakPVAdj = outbreakPVPerCohort * crossSectorMultiplier;
+
+  const totalEpiBenefitPerCohort = graduateBenefitAdj + outbreakPVAdj;
 
   return {
     months,
@@ -1434,22 +1481,199 @@ function computeEpidemiological(config, endorseRate) {
     outbreaksPerYearPerCohort,
     outbreaksPerYearNational,
     epiBenefitPerCohort: totalEpiBenefitPerCohort,
-    graduateBenefitPerCohort,
-    outbreakPVPerCohort,
+    graduateBenefitPerCohort: graduateBenefitAdj,
+    outbreakPVPerCohort: outbreakPVAdj,
     planningYears,
-    discountRate
+    discountRate,
+    completionRate,
+    outbreaksPerGraduatePerYear: outbreaksPerGrad,
+    valuePerOutbreak,
+    valuePerGraduate,
+    crossSectorMultiplier
   };
 }
+
+function mentorshipMentorCapacity(intensity) {
+  if (String(intensity) === "high") return 2;
+  if (String(intensity) === "medium") return 3.5;
+  return 5;
+}
+
+function computeCapacity(config) {
+  const trainees = Number(config.traineesPerCohort || 0);
+  const cohorts = Number(config.cohorts || 0);
+
+  const fellowsPerMentor = mentorshipMentorCapacity(config.mentorship);
+  const mentorsPerCohort = fellowsPerMentor > 0 ? Math.ceil(trainees / fellowsPerMentor) : 0;
+  const totalMentorsRequired = mentorsPerCohort * cohorts;
+
+  const availableMentors = Number(config.availableMentorsNational ?? 200);
+  const mentorShortfall = Math.max(0, totalMentorsRequired - (isNaN(availableMentors) ? 0 : availableMentors));
+  const withinMentorCapacity = totalMentorsRequired <= (isNaN(availableMentors) ? 0 : availableMentors);
+
+  // Optional sites/hubs capacity (if provided)
+  const sites = Number(config.availableTrainingSites || 0);
+  const maxCohortsPerSite = Number(config.maxCohortsPerSitePerYear || 0);
+
+  let siteCapacity = null;
+  let siteGap = null;
+  let withinSiteCapacity = null;
+  if (!isNaN(sites) && !isNaN(maxCohortsPerSite) && sites > 0 && maxCohortsPerSite > 0) {
+    siteCapacity = sites * maxCohortsPerSite;
+    siteGap = Math.max(0, cohorts - siteCapacity);
+    withinSiteCapacity = cohorts <= siteCapacity;
+  }
+
+  const status = withinMentorCapacity ? "Within current capacity" : "Requires capacity expansion";
+
+  return {
+    fellowsPerMentor,
+    mentorsPerCohort,
+    totalMentorsRequired,
+    availableMentors: isNaN(availableMentors) ? 0 : availableMentors,
+    mentorShortfall,
+    status,
+    siteCapacity,
+    siteGap,
+    withinSiteCapacity
+  };
+}
+
+function buildAssumptionsForScenario(scenario) {
+  const c = scenario.config;
+  const tierSettings = appState.epiSettings.tiers[c.tier] || {};
+  const general = appState.epiSettings.general || {};
+
+  return {
+    planningHorizonYears: scenario.planningYears ?? general.planningHorizonYears,
+    discountRate: scenario.discountRate ?? general.epiDiscountRate,
+    completionRate: scenario.epi?.completionRate ?? tierSettings.completionRate,
+    outbreaksPerGraduatePerYear: scenario.epi?.outbreaksPerGraduatePerYear ?? tierSettings.outbreaksPerGraduatePerYear,
+    valuePerOutbreak: scenario.epi?.valuePerOutbreak ?? tierSettings.valuePerOutbreak,
+    valuePerGraduate: scenario.epi?.valuePerGraduate ?? tierSettings.valuePerGraduate ?? 0,
+    opportunityCostIncluded: !!c.opportunityCostIncluded,
+    mentorSupportCostPerCohortBase: Number(c.mentorSupportCostPerCohortBase || 0),
+    mentorMultiplierApplied: mentorshipMultiplier(c.mentorship),
+    crossSectorBenefitMultiplier: Number(c.crossSectorBenefitMultiplier || 1.0),
+    availableMentorsNational: Number(c.availableMentorsNational ?? 200),
+    availableTrainingSites: Number(c.availableTrainingSites || 0),
+    maxCohortsPerSitePerYear: Number(c.maxCohortsPerSitePerYear || 0)
+  };
+}
+
+function getSelectedScenarioIds() {
+  const checks = Array.from(document.querySelectorAll('#scenario-table tbody input[type="checkbox"][data-scenario-id]'));
+  return checks.filter((c) => c.checked).map((c) => c.getAttribute("data-scenario-id"));
+}
+
+function getShortlistedOrTopScenarios(limit = 3) {
+  const selected = new Set(getSelectedScenarioIds());
+  const saved = appState.savedScenarios.slice();
+
+  if (selected.size > 0) {
+    return saved.filter((s) => selected.has(s.id));
+  }
+
+  // Default: top scenarios by net benefit (all cohorts), descending
+  saved.sort((a, b) => (b.netBenefitAllCohorts || 0) - (a.netBenefitAllCohorts || 0));
+  return saved.slice(0, Math.min(limit, saved.length));
+}
+
+function getExportMode() {
+  const brief = document.getElementById("export-mode-brief");
+  const standard = document.getElementById("export-mode-standard");
+  if (brief && brief.checked) return "brief";
+  if (standard && standard.checked) return "standard";
+  return "standard";
+}
+
+function getExportNotesFromUI() {
+  const enablersEl = document.getElementById("export-enablers");
+  const risksEl = document.getElementById("export-risks");
+  return {
+    enablers: enablersEl ? (enablersEl.value || "").trim() : "",
+    risks: risksEl ? (risksEl.value || "").trim() : ""
+  };
+}
+
+
+
+function scenarioTableMarkdownRows(items) {
+  const header =
+    "| Scenario | Endorsement | Perceived programme value (all cohorts) | Economic cost (all cohorts) | Epidemiological benefit (all cohorts) | Net benefit | BCR | Feasibility |\n" +
+    "|---|---:|---:|---:|---:|---:|---:|---|\n";
+  const body = items
+    .map((s) => {
+      const feas = s.capacity ? s.capacity.status : computeCapacity(s.config).status;
+      return `| ${safeText(s.config.name || "Scenario")} | ${formatNumber(s.endorseRate, 1)}% | ${formatCurrencyDisplay(
+        s.wtpAllCohorts,
+        0
+      )} | ${formatCurrencyDisplay(s.natTotalCost, 0)} | ${formatCurrencyDisplay(s.epiBenefitAllCohorts, 0)} | ${formatCurrencyDisplay(
+        s.netBenefitAllCohorts,
+        0
+      )} | ${s.natBcr !== null ? formatNumber(s.natBcr, 2) : "-"} | ${safeText(feas)} |`;
+    })
+    .join("\n");
+  return header + body;
+}
+
+function escapeHtmlSimple(x) {
+  return safeText(x)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function updateValidationWarnings(config) {
+  const container = document.getElementById("config-warnings");
+  if (!container) return;
+
+  const warnings = [];
+
+  const totalTrainees = (Number(config.cohorts || 0) * Number(config.traineesPerCohort || 0)) || 0;
+  if (totalTrainees >= 2000) {
+    warnings.push(
+      `Check realism: cohorts × trainees per cohort = ${formatNumber(totalTrainees, 0)}. Confirm staffing, sites, and scheduling assumptions.`
+    );
+  }
+
+  const sliderEl = document.getElementById("cost-slider");
+  if (sliderEl) {
+    const min = Number(sliderEl.min);
+    const max = Number(sliderEl.max);
+    const v = Number(sliderEl.value);
+    if (!isNaN(min) && !isNaN(max) && max > min) {
+      const p = (v - min) / (max - min);
+      if (p <= 0.05 || p >= 0.95) {
+        warnings.push("Cost input is near the slider extreme. Sense-check whether the cost per trainee-month is realistic.");
+      }
+    }
+  }
+
+  if (warnings.length === 0) {
+    container.innerHTML = "";
+    container.style.display = "none";
+    return;
+  }
+
+  container.style.display = "";
+  container.innerHTML = warnings.map((w) => `<p class="warn">⚠ ${escapeHtmlSimple(w)}</p>`).join("");
+}
+
+
+
 
 function computeScenario(config) {
   const pref = computeEndorsementAndWTP(config);
   const costs = computeCosts(config);
   const epi = computeEpidemiological(config, pref.endorseRate);
+  const capacity = computeCapacity(config);
 
   const wtpPerTraineePerMonth = pref.wtpPerTraineePerMonth;
 
   const wtpPerCohort = wtpPerTraineePerMonth * epi.months * config.traineesPerCohort;
-
   const wtpAllCohorts = wtpPerCohort * config.cohorts;
 
   const epiBenefitPerCohort = epi.epiBenefitPerCohort;
@@ -1464,6 +1688,7 @@ function computeScenario(config) {
   const natTotalCost = costs.totalEconomicCostPerCohort * config.cohorts;
   const natBcr = natTotalCost > 0 ? epiBenefitAllCohorts / natTotalCost : null;
 
+  // Retain existing decomposition placeholder; unchanged computation
   const wtpOutbreakComponent = wtpAllCohorts * 0.3;
 
   return {
@@ -1473,11 +1698,17 @@ function computeScenario(config) {
     preferenceModel: config.preferenceModel,
     endorseRate: pref.endorseRate,
     optOutRate: pref.optOutRate,
+
+    // "Perceived programme value" (previously WTP) - calculations unchanged
     wtpPerTraineePerMonth,
     wtpPerCohort,
     wtpAllCohorts,
+    wtpOutbreakComponent,
+
     costs,
     epi,
+    capacity,
+
     epiBenefitPerCohort,
     epiBenefitAllCohorts,
     netBenefitPerCohort,
@@ -1489,11 +1720,11 @@ function computeScenario(config) {
     graduatesAllCohorts: epi.graduatesAllCohorts,
     outbreaksPerYearPerCohort: epi.outbreaksPerYearPerCohort,
     outbreaksPerYearNational: epi.outbreaksPerYearNational,
-    wtpOutbreakComponent,
     discountRate: epi.discountRate,
     planningYears: epi.planningYears
   };
 }
+
 
 /* ===========================
    Charts
@@ -1823,144 +2054,6 @@ function initApplySettingsButton() {
 }
 
 /* ===========================
-   Monitoring & Evaluation tab
-   =========================== */
-
-function updateMETab(scenario) {
-  const logicDiv = document.getElementById("me-logic-model");
-  const tableDiv = document.getElementById("me-indicators-table");
-  const notesDiv = document.getElementById("me-notes");
-  if (!logicDiv || !tableDiv || !notesDiv || !scenario) return;
-
-  const c = scenario.config;
-  const planningYears = scenario.planningYears || appState.epiSettings.general.planningHorizonYears;
-
-  logicDiv.innerHTML = `
-    <p>This monitoring and evaluation framework links the STEPS configuration
-    (tier ${safeText(c.tier)}, ${formatNumber(c.cohorts, 0)} cohorts of ${formatNumber(
-      c.traineesPerCohort,
-      0
-    )} trainees,
-    response within ${safeText(c.response)} days) to indicators that track inputs, outputs,
-    capacity and impact over the ${formatNumber(planningYears, 0)} year planning horizon.</p>
-  `;
-
-  const rows = ME_INDICATORS.map((ind) => {
-    const val = ind.scenarioMapping ? ind.scenarioMapping(scenario) : null;
-    const formatted =
-      ind.id === "impact_bcr"
-        ? (val != null ? formatNumber(val, 2) : "-")
-        : formatCurrencyDisplay(val, 0);
-    return `
-      <tr>
-        <td>${safeText(ind.level)}</td>
-        <td>${safeText(ind.name)}</td>
-        <td>${safeText(ind.formula)}</td>
-        <td>${safeText(ind.dataSource)}</td>
-        <td class="numeric-cell">${formatted}</td>
-      </tr>
-    `;
-  }).join("");
-
-  tableDiv.innerHTML = `
-    <table class="data-table" aria-label="Monitoring and evaluation indicators">
-      <thead>
-        <tr>
-          <th>Level</th>
-          <th>Indicator</th>
-          <th>Definition / formula</th>
-          <th>Main data source</th>
-          <th>Planned value under this scenario</th>
-        </tr>
-      </thead>
-      <tbody>${rows}</tbody>
-    </table>
-  `;
-
-  notesDiv.textContent =
-    "These planned values can be used as targets in FETP monitoring and evaluation plans. " +
-    "Routine programme and surveillance data should be used to track actual values over time " +
-    "and compare against the targets implied by STEPS scenarios.";
-}
-
-function exportMELogframeToExcel() {
-  if (!window.XLSX) {
-    showToast("Excel export is not available in this browser.", "error");
-    return;
-  }
-  const table = document.querySelector("#me-indicators-table table");
-  if (!table) {
-    showToast("M&E indicators table is not available. Apply a configuration first.", "warning");
-    return;
-  }
-  const wb = XLSX.utils.book_new();
-  const sheet = XLSX.utils.table_to_sheet(table);
-  XLSX.utils.book_append_sheet(wb, sheet, "STEPS M&E logframe");
-  XLSX.writeFile(wb, "steps_me_logframe.xlsx");
-  showToast("M&E logframe Excel file downloaded.", "success");
-}
-
-function exportMELogframeToPdf() {
-  if (!window.jspdf || !window.jspdf.jsPDF) {
-    showToast("PDF export is not available in this browser.", "error");
-    return;
-  }
-  const table = document.querySelector("#me-indicators-table table");
-  if (!table) {
-    showToast("M&E indicators table is not available. Apply a configuration first.", "warning");
-    return;
-  }
-
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ orientation: "landscape" });
-
-  let y = 10;
-  doc.setFontSize(14);
-  doc.text("STEPS FETP India Decision Aid - Monitoring and evaluation logframe", 10, y);
-  y += 10;
-
-  const headRow = table.querySelector("thead tr");
-  const head = [];
-  if (headRow) {
-    head.push(Array.from(headRow.children).map((th) => th.textContent.trim()));
-  }
-
-  const body = [];
-  const bodyRows = table.querySelectorAll("tbody tr");
-  bodyRows.forEach((tr) => {
-    const row = Array.from(tr.children).map((td) => td.textContent.trim());
-    body.push(row);
-  });
-
-  if (doc.autoTable && head.length && body.length) {
-    doc.setFontSize(8);
-    doc.autoTable({
-      head,
-      body,
-      startY: y,
-      styles: { fontSize: 7, cellPadding: 2 },
-      headStyles: { fontSize: 7 },
-      theme: "grid"
-    });
-  } else {
-    doc.setFontSize(9);
-    const text = table.innerText || "";
-    const lines = doc.splitTextToSize(text, doc.internal.pageSize.getWidth() - 20);
-    lines.forEach((line) => {
-      if (y > doc.internal.pageSize.getHeight() - 10) {
-        doc.addPage();
-        y = 10;
-      }
-      doc.text(line, 10, y);
-      y += 10;
-    });
-  }
-
-  doc.save("steps_me_logframe.pdf");
-  showToast("M&E logframe PDF downloaded.", "success");
-}
-
-/* ===========================
    Results and national tabs updates
    =========================== */
 
@@ -2075,19 +2168,67 @@ function updateResultsTab(scenario) {
   const outbreaksEl = document.getElementById("epi-outbreaks");
   const epiBenefitEl = document.getElementById("epi-benefit");
 
+  // NEW elements (defensive)
+  const mentorCostEl = document.getElementById("mentor-cost-per-cohort");
+  const directCostEl = document.getElementById("direct-cost-per-cohort");
+
+  // Capacity panel elements (defensive)
+  const capMentorsPerCohortEl = document.getElementById("capacity-mentors-per-cohort");
+  const capTotalMentorsEl = document.getElementById("capacity-total-mentors");
+  const capAvailableMentorsEl = document.getElementById("capacity-available-mentors");
+  const capShortfallEl = document.getElementById("capacity-mentor-shortfall");
+  const capStatusEl = document.getElementById("capacity-status");
+  const capNoteEl = document.getElementById("capacity-note");
+  const capSiteCapacityEl = document.getElementById("capacity-site-capacity");
+  const capSiteGapEl = document.getElementById("capacity-site-gap");
+  const capSitesRow = document.getElementById("capacity-sites-row");
+
   if (endorseEl) endorseEl.textContent = formatNumber(scenario.endorseRate, 1) + "%";
   if (optOutEl) optOutEl.textContent = formatNumber(scenario.optOutRate, 1) + "%";
+
+  // Relabelled in UI as perceived programme value; IDs retained for backwards compatibility
   if (wtpPerTraineeEl) wtpPerTraineeEl.textContent = formatCurrencyDisplay(scenario.wtpPerTraineePerMonth, 0);
   if (wtpTotalCohortEl) wtpTotalCohortEl.textContent = formatCurrencyDisplay(scenario.wtpPerCohort, 0);
+
   if (progCostEl) progCostEl.textContent = formatCurrencyDisplay(scenario.costs.programmeCostPerCohort, 0);
+  if (mentorCostEl) mentorCostEl.textContent = formatCurrencyDisplay(scenario.costs.mentorCostPerCohort, 0);
+  if (directCostEl) directCostEl.textContent = formatCurrencyDisplay(scenario.costs.directCostPerCohort, 0);
+
+  // Existing "total-cost" remains economic cost per cohort
   if (totalCostEl) totalCostEl.textContent = formatCurrencyDisplay(scenario.costs.totalEconomicCostPerCohort, 0);
+
   if (netBenefitEl) netBenefitEl.textContent = formatCurrencyDisplay(scenario.netBenefitPerCohort, 0);
   if (bcrEl) bcrEl.textContent = scenario.bcrPerCohort !== null ? formatNumber(scenario.bcrPerCohort, 2) : "-";
 
   if (gradsEl) gradsEl.textContent = formatNumber(scenario.graduatesAllCohorts, 0);
   if (outbreaksEl) outbreaksEl.textContent = formatNumber(scenario.outbreaksPerYearNational, 1);
   if (epiBenefitEl) epiBenefitEl.textContent = formatCurrencyDisplay(scenario.epiBenefitPerCohort, 0);
+
+  // Capacity/feasibility
+  if (scenario.capacity) {
+    if (capMentorsPerCohortEl) capMentorsPerCohortEl.textContent = formatNumber(scenario.capacity.mentorsPerCohort, 0);
+    if (capTotalMentorsEl) capTotalMentorsEl.textContent = formatNumber(scenario.capacity.totalMentorsRequired, 0);
+    if (capAvailableMentorsEl) capAvailableMentorsEl.textContent = formatNumber(scenario.capacity.availableMentors, 0);
+    if (capShortfallEl) capShortfallEl.textContent = formatNumber(scenario.capacity.mentorShortfall, 0);
+    if (capStatusEl) capStatusEl.textContent = scenario.capacity.status || "-";
+
+    if (capNoteEl) {
+      if (scenario.capacity.mentorShortfall > 0) {
+        capNoteEl.textContent = `Mentor gap of ${formatNumber(scenario.capacity.mentorShortfall, 0)} to meet the selected cohort and mentorship intensity.`;
+      } else {
+        capNoteEl.textContent = "Mentor capacity appears sufficient for the selected cohorts and mentorship intensity.";
+      }
+    }
+
+    const showSites = scenario.capacity.siteCapacity !== null && scenario.capacity.siteCapacity !== undefined;
+    if (capSitesRow) capSitesRow.style.display = showSites ? "" : "none";
+    if (showSites) {
+      if (capSiteCapacityEl) capSiteCapacityEl.textContent = formatNumber(scenario.capacity.siteCapacity, 1);
+      if (capSiteGapEl) capSiteGapEl.textContent = formatNumber(scenario.capacity.siteGap, 1);
+    }
+  }
 }
+
 
 function updateCostingTab(scenario) {
   const select = document.getElementById("cost-source");
@@ -2160,7 +2301,28 @@ function updateCostingTab(scenario) {
     `;
     tbody.appendChild(tr);
   });
+
+
+  // NEW: Mentor support cost as explicit component (per cohort)
+  if (tbody && scenario.costs) {
+    const mentorPerCohort = Number(scenario.costs.mentorCostPerCohort || 0);
+    if (mentorPerCohort > 0) {
+      const trainees = Number(scenario.config.traineesPerCohort || 0);
+      const months = TIER_MONTHS[scenario.config.tier] || 12;
+      const perTraineePerMonth = trainees > 0 && months > 0 ? mentorPerCohort / (trainees * months) : 0;
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>Mentor support (explicit)</td>
+        <td class="numeric-cell">—</td>
+        <td class="numeric-cell">${formatCurrencyDisplay(mentorPerCohort, 0)}</td>
+        <td class="numeric-cell">${formatCurrencyDisplay(perTraineePerMonth, 0)}</td>
+        <td>Base mentor support cost per cohort scaled by mentorship intensity multiplier.</td>
+      `;
+      tbody.appendChild(tr);
+    }
+  }
 }
+
 
 function updateNationalSimulationTab(scenario) {
   const totCostEl = document.getElementById("nat-total-cost");
@@ -2219,51 +2381,158 @@ function refreshSavedScenariosTable() {
   if (!tbody) return;
 
   tbody.innerHTML = "";
-  appState.savedScenarios.forEach((scenario) => {
-    const c = scenario.config;
-    const tr = document.createElement("tr");
-    const tierLabel = c.tier === "frontline" ? "Frontline" : c.tier === "intermediate" ? "Intermediate" : "Advanced";
-    const mentorshipLabel = c.mentorship === "low" ? "Low" : c.mentorship === "medium" ? "Medium" : "High";
-    const careerLabel =
-      c.career === "certificate" ? "Certificate" : c.career === "uniqual" ? "University qualification" : "Government career pathway";
 
-    tr.innerHTML = `
-      <td><input type="checkbox" data-scenario-id="${scenario.id}" /></td>
-      <td>${c.name || "Scenario"}</td>
-      <td>
-        <span class="chip chip-tier">${tierLabel}</span>
-        <span class="chip chip-mentorship">${mentorshipLabel} mentorship</span>
-        <span class="chip chip-incentive">${careerLabel}</span>
+  const headerEls = Array.from(document.querySelectorAll("#scenario-table thead th"));
+  const headers = headerEls.map((h) => (h.textContent || "").trim().toLowerCase());
+
+  function cellNumeric(val, decimals = 0) {
+    return `<td class="numeric-cell">${formatNumber(val, decimals)}</td>`;
+  }
+  function cellCurrency(val, decimals = 0) {
+    return `<td class="numeric-cell">${formatCurrencyDisplay(val, decimals)}</td>`;
+  }
+
+  appState.savedScenarios.forEach((s) => {
+    const c = s.config;
+
+    const tierLabel =
+      c.tier === "advanced" ? "Advanced FETP" : c.tier === "intermediate" ? "Intermediate FETP" : "Other";
+    const careerLabel =
+      c.career === "high" ? "High (Guaranteed promotion track)" : c.career === "low" ? "Low (Certificate only)" : "Standard";
+    const mentorshipLabel =
+      c.mentorship === "high" ? "High (Intensive mentorship)" : c.mentorship === "low" ? "Low (Minimal)" : "Medium (Regular)";
+    const deliveryLabel = c.delivery === "hybrid" ? "Hybrid (Online + Field)" : c.delivery === "inperson" ? "In-person" : "Online";
+    const responseLabel = "Within 7 days";
+
+    const cap = s.capacity || computeCapacity(c);
+
+    const tagsHtml = `
+      <td class="scenario-tags">
+        <span class="tag-pill">${tierLabel}</span>
+        <span class="tag-pill">${mentorshipLabel}</span>
+        <span class="tag-pill">${deliveryLabel}</span>
       </td>
-      <td>${tierLabel}</td>
-      <td>${careerLabel}</td>
-      <td>${mentorshipLabel}</td>
-      <td>${c.delivery === "blended" ? "Blended" : c.delivery === "inperson" ? "Fully in person" : "Fully online"}</td>
-      <td>Within 7 days</td>
-      <td class="numeric-cell">${formatNumber(c.cohorts, 0)}</td>
-      <td class="numeric-cell">${formatNumber(c.traineesPerCohort, 0)}</td>
-      <td class="numeric-cell">${formatCurrencyDisplay(c.costPerTraineePerMonth, 0)}</td>
-      <td>${scenario.preferenceModel}</td>
-      <td class="numeric-cell">${formatNumber(scenario.endorseRate, 1)}%</td>
-      <td class="numeric-cell">${formatCurrencyDisplay(scenario.wtpPerTraineePerMonth, 0)}</td>
-      <td class="numeric-cell">${formatCurrencyDisplay(scenario.wtpAllCohorts, 0)}</td>
-      <td class="numeric-cell">${scenario.natBcr !== null ? formatNumber(scenario.natBcr, 2) : "-"}</td>
-      <td class="numeric-cell">${formatCurrencyDisplay(scenario.natTotalCost, 0)}</td>
-      <td class="numeric-cell">${formatCurrencyDisplay(scenario.epiBenefitAllCohorts, 0)}</td>
-      <td class="numeric-cell">${formatCurrencyDisplay(scenario.netBenefitAllCohorts, 0)}</td>
-      <td class="numeric-cell">${formatNumber(scenario.outbreaksPerYearNational, 1)}</td>
-      <td>${c.notes || ""}</td>
     `;
+
+    const cellsByHeader = (h) => {
+      if (h.includes("shortlist")) {
+        return `<td><input type="checkbox" data-scenario-id="${s.id}" aria-label="Shortlist scenario"></td>`;
+      }
+      if (h === "name" || h.includes("scenario name")) {
+        return `<td>${safeText(c.name)}</td>`;
+      }
+      if (h.includes("tag")) return tagsHtml;
+      if (h.includes("tier")) return `<td>${tierLabel}</td>`;
+      if (h.includes("career")) return `<td>${careerLabel}</td>`;
+      if (h.includes("mentor") && h.includes("intensity")) return `<td>${mentorshipLabel}</td>`;
+      if (h.includes("mentorship") && !h.includes("cost")) return `<td>${mentorshipLabel}</td>`;
+      if (h.includes("delivery")) return `<td>${deliveryLabel}</td>`;
+      if (h.includes("response")) return `<td>${responseLabel}</td>`;
+      if (h === "cohorts" || h.includes("number of cohorts")) return cellNumeric(c.cohorts, 0);
+      if (h.includes("trainees") && h.includes("cohort")) return cellNumeric(c.traineesPerCohort, 0);
+      if (h.includes("cost per trainee") && h.includes("month")) return cellCurrency(c.costPerTraineePerMonth, 0);
+
+      if (h.includes("mentor cost") && h.includes("per cohort")) return cellCurrency(s.costs?.mentorCostPerCohort ?? 0, 0);
+      if (h.includes("total mentor")) return cellCurrency((s.costs?.mentorCostPerCohort ?? 0) * (c.cohorts || 0), 0);
+
+      if (h.includes("direct cost") && (h.includes("total") || h.includes("all cohorts") || h.includes("national"))) {
+        return cellCurrency(s.costs?.totalDirectCostAllCohorts ?? (s.costs?.directCostPerCohort ?? 0) * (c.cohorts || 0), 0);
+      }
+      if (h.includes("direct cost") && h.includes("per cohort")) {
+        return cellCurrency(s.costs?.directCostPerCohort ?? 0, 0);
+      }
+
+      if (h.includes("economic cost") && (h.includes("total") || h.includes("all cohorts") || h.includes("national"))) {
+        return cellCurrency(s.costs?.totalEconomicCostAllCohorts ?? s.natTotalCost ?? 0, 0);
+      }
+      if (h.includes("economic cost") && h.includes("per cohort")) {
+        return cellCurrency(s.costs?.totalEconomicCostPerCohort ?? 0, 0);
+      }
+
+      if (h.includes("preference model")) return `<td>${safeText(s.preferenceModel)}</td>`;
+      if (h.includes("endorse")) return cellNumeric(s.endorseRate, 1);
+
+      if ((h.includes("wtp") || h.includes("perceived")) && h.includes("per trainee")) return cellCurrency(s.wtpPerTraineePerMonth, 0);
+      if ((h.includes("wtp") || h.includes("perceived")) && h.includes("total") && h.includes("cohort")) return cellCurrency(s.wtpPerCohort, 0);
+      if ((h.includes("wtp") || h.includes("perceived")) && (h.includes("all cohorts") || h.includes("national"))) return cellCurrency(s.wtpAllCohorts, 0);
+
+      if (h.includes("bcr") && (h.includes("cohort") || h.includes("per cohort"))) {
+        return `<td class="numeric-cell">${s.bcrPerCohort !== null ? formatNumber(s.bcrPerCohort, 2) : "-"}</td>`;
+      }
+      if (h.includes("bcr") && (h.includes("national") || h.includes("all cohorts"))) {
+        return `<td class="numeric-cell">${s.natBcr !== null ? formatNumber(s.natBcr, 2) : "-"}</td>`;
+      }
+
+      if (h.includes("total economic cost")) return cellCurrency(s.natTotalCost, 0);
+      if (h.includes("epi benefit") && (h.includes("all cohorts") || h.includes("national"))) return cellCurrency(s.epiBenefitAllCohorts, 0);
+      if (h.includes("epi benefit")) return cellCurrency(s.epiBenefitPerCohort, 0);
+      if (h.includes("net benefit") && (h.includes("all cohorts") || h.includes("national"))) return cellCurrency(s.netBenefitAllCohorts, 0);
+      if (h.includes("net benefit")) return cellCurrency(s.netBenefitPerCohort, 0);
+
+      if (h.includes("feasibility") || (h.includes("capacity") && h.includes("status"))) return `<td>${safeText(cap.status)}</td>`;
+      if (h.includes("mentor shortfall")) return cellNumeric(cap.mentorShortfall, 0);
+
+      if (h.includes("actions") || h.includes("view")) {
+        return `<td><button class="mini" data-snapshot="${s.id}">View</button></td>`;
+      }
+
+      // Fallback: keep blank cell to preserve alignment
+      return `<td></td>`;
+    };
+
+    const tr = document.createElement("tr");
+
+    if (headers.length > 0) {
+      tr.innerHTML = headers.map((h) => cellsByHeader(h)).join("");
+    } else {
+      // Backwards compatible fallback (should not happen)
+      tr.innerHTML = `
+        <td><input type="checkbox" data-scenario-id="${s.id}" aria-label="Shortlist scenario"></td>
+        <td>${safeText(c.name)}</td>
+        ${tagsHtml}
+        <td>${tierLabel}</td>
+        <td>${careerLabel}</td>
+        <td>${mentorshipLabel}</td>
+        <td>${deliveryLabel}</td>
+        <td>${responseLabel}</td>
+        <td class="numeric-cell">${formatNumber(c.cohorts, 0)}</td>
+        <td class="numeric-cell">${formatNumber(c.traineesPerCohort, 0)}</td>
+        <td class="numeric-cell">${formatCurrencyDisplay(c.costPerTraineePerMonth, 0)}</td>
+        <td>${safeText(s.preferenceModel)}</td>
+        <td class="numeric-cell">${formatNumber(s.endorseRate, 1)}%</td>
+        <td class="numeric-cell">${formatCurrencyDisplay(s.wtpPerTraineePerMonth, 0)}</td>
+        <td class="numeric-cell">${formatCurrencyDisplay(s.wtpAllCohorts, 0)}</td>
+        <td class="numeric-cell">${formatCurrencyDisplay(s.natTotalCost, 0)}</td>
+        <td class="numeric-cell">${formatCurrencyDisplay(s.epiBenefitAllCohorts, 0)}</td>
+        <td class="numeric-cell">${formatCurrencyDisplay(s.netBenefitAllCohorts, 0)}</td>
+        <td class="numeric-cell">${s.natBcr !== null ? formatNumber(s.natBcr, 2) : "-"}</td>
+        <td><button class="mini" data-snapshot="${s.id}">View</button></td>
+      `;
+    }
+
     tbody.appendChild(tr);
   });
+
+  // Attach snapshot click handler (delegated)
+  tbody.querySelectorAll('button[data-snapshot]').forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      const id = e.currentTarget.getAttribute("data-snapshot");
+      const sc = appState.savedScenarios.find((x) => x.id === id);
+      if (sc) openSnapshotModal(sc);
+    });
+  });
 }
+
 
 function exportScenariosToExcel() {
   if (!window.XLSX) {
     showToast("Excel export is not available in this browser.", "error");
     return;
   }
+
   const wb = XLSX.utils.book_new();
+
+  // Sheet 1: Scenario summary table
   const rows = [];
   rows.push([
     "Name",
@@ -2275,19 +2544,51 @@ function exportScenariosToExcel() {
     "Cohorts",
     "Trainees per cohort",
     "Cost per trainee per month (INR)",
-    "Endorsement (%)",
-    "WTP per trainee per month (INR)",
-    "Total WTP all cohorts (INR)",
+    "Opportunity cost included",
+    "Mentor support cost base per cohort (INR)",
+    "Mentor multiplier",
+    "Mentor support cost per cohort (INR)",
+    "Total mentor support cost all cohorts (INR)",
+    "Programme cost per cohort (INR)",
+    "Direct cost per cohort (INR)",
+    "Opportunity cost per cohort (INR)",
+    "Economic cost per cohort (INR)",
+    "Total direct cost all cohorts (INR)",
     "Total economic cost all cohorts (INR)",
-    "Indicative outbreak cost saving all cohorts (INR)",
-    "Net outbreak cost saving all cohorts (INR)",
-    "Benefit cost ratio (outbreak benefits)"
+    "Preference model",
+    "Endorsement (%)",
+    "Perceived programme value per trainee per month (INR)",
+    "Perceived programme value per cohort (INR)",
+    "Total perceived programme value all cohorts (INR)",
+    "Total epidemiological benefit per cohort (INR)",
+    "Total epidemiological benefit all cohorts (INR)",
+    "Net epidemiological benefit per cohort (INR)",
+    "Net epidemiological benefit all cohorts (INR)",
+    "BCR per cohort",
+    "BCR national",
+    "Outbreak responses per year (national)",
+    "Cross-sector benefit multiplier",
+    "Mentors required per cohort",
+    "Total mentors required nationally",
+    "Available mentors nationally",
+    "Mentor shortfall",
+    "Feasibility status",
+    "Available training sites / hubs",
+    "Max cohorts per site per year",
+    "Implied annual site capacity (cohorts)",
+    "Site capacity gap (cohorts)",
+    "Notes",
+    "Enablers (export)",
+    "Risks (export)"
   ]);
 
   appState.savedScenarios.forEach((s) => {
     const c = s.config;
+    const cap = s.capacity || computeCapacity(c);
+    const a = buildAssumptionsForScenario(s);
+
     rows.push([
-      c.name || "",
+      c.name || "Scenario",
       c.tier,
       c.career,
       c.mentorship,
@@ -2296,73 +2597,387 @@ function exportScenariosToExcel() {
       c.cohorts,
       c.traineesPerCohort,
       c.costPerTraineePerMonth,
+      c.opportunityCostIncluded ? "Yes" : "No",
+      a.mentorSupportCostPerCohortBase,
+      a.mentorMultiplierApplied,
+      s.costs?.mentorCostPerCohort ?? 0,
+      s.costs?.totalMentorCostAllCohorts ?? (s.costs?.mentorCostPerCohort ?? 0) * (c.cohorts || 0),
+      s.costs?.programmeCostPerCohort ?? 0,
+      s.costs?.directCostPerCohort ?? 0,
+      s.costs?.opportunityCostPerCohort ?? 0,
+      s.costs?.totalEconomicCostPerCohort ?? 0,
+      s.costs?.totalDirectCostAllCohorts ?? (s.costs?.directCostPerCohort ?? 0) * (c.cohorts || 0),
+      s.costs?.totalEconomicCostAllCohorts ?? s.natTotalCost ?? 0,
+      s.preferenceModel,
       s.endorseRate,
       s.wtpPerTraineePerMonth,
+      s.wtpPerCohort,
       s.wtpAllCohorts,
-      s.natTotalCost,
+      s.epiBenefitPerCohort,
       s.epiBenefitAllCohorts,
+      s.netBenefitPerCohort,
       s.netBenefitAllCohorts,
-      s.natBcr
+      s.bcrPerCohort !== null ? s.bcrPerCohort : "",
+      s.natBcr !== null ? s.natBcr : "",
+      s.outbreaksPerYearNational,
+      a.crossSectorBenefitMultiplier,
+      cap.mentorsPerCohort,
+      cap.totalMentorsRequired,
+      cap.availableMentors,
+      cap.mentorShortfall,
+      cap.status,
+      a.availableTrainingSites,
+      a.maxCohortsPerSitePerYear,
+      cap.siteCapacity !== null ? cap.siteCapacity : "",
+      cap.siteGap !== null ? cap.siteGap : "",
+      c.notes || "",
+      c.exportEnablers || "",
+      c.exportRisks || ""
     ]);
   });
 
   const sheet = XLSX.utils.aoa_to_sheet(rows);
   XLSX.utils.book_append_sheet(wb, sheet, "STEPS scenarios");
+
+  // Sheet 2: Assumptions used (scenario-specific)
+  const aRows = [];
+  aRows.push([
+    "Scenario",
+    "Planning horizon (years)",
+    "Discount rate (%)",
+    "Completion rate (%)",
+    "Outbreak responses per graduate per year",
+    "Value per outbreak (INR)",
+    "Non-outbreak value per graduate per year (INR)",
+    "Opportunity cost included",
+    "Mentor cost base per cohort (INR)",
+    "Mentorship multiplier applied",
+    "Cross-sector benefit multiplier",
+    "Available mentors nationally",
+    "Available training sites / hubs",
+    "Max cohorts per site per year"
+  ]);
+
+  appState.savedScenarios.forEach((s) => {
+    const a = buildAssumptionsForScenario(s);
+    aRows.push([
+      s.config.name || "Scenario",
+      a.planningHorizonYears,
+      a.discountRate * 100,
+      a.completionRate * 100,
+      a.outbreaksPerGraduatePerYear,
+      a.valuePerOutbreak,
+      a.valuePerGraduate,
+      a.opportunityCostIncluded ? "Yes" : "No",
+      a.mentorSupportCostPerCohortBase,
+      a.mentorMultiplierApplied,
+      a.crossSectorBenefitMultiplier,
+      a.availableMentorsNational,
+      a.availableTrainingSites,
+      a.maxCohortsPerSitePerYear
+    ]);
+  });
+
+  const aSheet = XLSX.utils.aoa_to_sheet(aRows);
+  XLSX.utils.book_append_sheet(wb, aSheet, "Assumptions");
+
   XLSX.writeFile(wb, "steps_saved_scenarios.xlsx");
   showToast("Excel file downloaded.", "success");
 }
+
 
 function exportScenariosToPdf() {
   if (!window.jspdf || !window.jspdf.jsPDF) {
     showToast("PDF export is not available in this browser.", "error");
     return;
   }
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ orientation: "landscape" });
 
-  let y = 10;
+  const { jsPDF } = window.jspdf;
+  const mode = getExportMode();
+
+  const notes = getExportNotesFromUI();
+  const scenarios =
+    mode === "brief" ? getShortlistedOrTopScenarios(3) : appState.savedScenarios.slice();
+
+  if (scenarios.length === 0) {
+    showToast("Save at least one scenario before exporting.", "warning");
+    return;
+  }
+
+  function sortByNetBenefitDesc(a, b) {
+    return (b.netBenefitAllCohorts || 0) - (a.netBenefitAllCohorts || 0);
+  }
+
+  const recommended = scenarios.slice().sort(sortByNetBenefitDesc)[0] || scenarios[0];
+  const recommendedAssumptions = buildAssumptionsForScenario(recommended);
+  const recommendedCapacity = recommended.capacity || computeCapacity(recommended.config);
+
+  const doc =
+    mode === "brief" ? new jsPDF({ orientation: "portrait" }) : new jsPDF({ orientation: "landscape" });
+
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+
+  function addWrappedText(text, x, y, maxWidth, lineHeight) {
+    const lines = doc.splitTextToSize(String(text), maxWidth);
+    lines.forEach((ln) => {
+      if (y > pageH - 12) {
+        doc.addPage();
+        y = 12;
+      }
+      doc.text(ln, x, y);
+      y += lineHeight;
+    });
+    return y;
+  }
+
+  function drawBox(x, y, w, h, title) {
+    doc.rect(x, y, w, h);
+    if (title) {
+      doc.setFontSize(10);
+      doc.text(title, x + 2, y + 6);
+    }
+  }
+
+  function scenarioTableMarkdownRows(items) {
+    const header =
+      "| Scenario | Endorsement | Perceived programme value (all cohorts) | Economic cost (all cohorts) | Epidemiological benefit (all cohorts) | Net benefit | BCR | Feasibility |\n" +
+      "|---|---:|---:|---:|---:|---:|---:|---|\n";
+    const body = items
+      .map((s) => {
+        const feas = s.capacity ? s.capacity.status : computeCapacity(s.config).status;
+        return `| ${safeText(s.config.name || "Scenario")} | ${formatNumber(s.endorseRate, 1)}% | ${formatCurrencyDisplay(
+          s.wtpAllCohorts,
+          0
+        )} | ${formatCurrencyDisplay(s.natTotalCost, 0)} | ${formatCurrencyDisplay(s.epiBenefitAllCohorts, 0)} | ${formatCurrencyDisplay(
+          s.netBenefitAllCohorts,
+          0
+        )} | ${s.natBcr !== null ? formatNumber(s.natBcr, 2) : "-"} | ${safeText(feas)} |`;
+      })
+      .join("\n");
+    return header + body;
+  }
+
+  function writeAssumptionsBox(a, x, y, w) {
+    const lines = [
+      `Planning horizon: ${formatNumber(a.planningHorizonYears, 0)} years`,
+      `Discount rate: ${formatNumber(a.discountRate * 100, 1)}%`,
+      `Completion rate: ${formatNumber(a.completionRate * 100, 1)}%`,
+      `Outbreak responses per graduate per year: ${formatNumber(a.outbreaksPerGraduatePerYear, 2)}`,
+      `Value per outbreak (INR): ${formatCurrencyDisplay(a.valuePerOutbreak, 0)}`,
+      `Non-outbreak value per graduate per year (INR): ${formatCurrencyDisplay(a.valuePerGraduate, 0)}`,
+      `Opportunity cost included: ${a.opportunityCostIncluded ? "Yes" : "No"}`,
+      `Mentor cost base per cohort (INR): ${formatCurrencyDisplay(a.mentorSupportCostPerCohortBase, 0)}`,
+      `Mentorship multiplier applied: ${formatNumber(a.mentorMultiplierApplied, 1)}`,
+      `Cross-sector benefit multiplier: ${formatNumber(a.crossSectorBenefitMultiplier, 2)}`,
+      `Available mentors nationally: ${formatNumber(a.availableMentorsNational, 0)}`
+    ];
+
+    if (a.availableTrainingSites && a.maxCohortsPerSitePerYear) {
+      lines.push(`Training sites/hubs: ${formatNumber(a.availableTrainingSites, 0)}; Max cohorts per site/year: ${formatNumber(a.maxCohortsPerSitePerYear, 0)}`);
+    }
+
+    doc.setFontSize(9);
+    let yy = y;
+    lines.forEach((ln) => {
+      yy = addWrappedText(ln, x, yy, w, 4.5);
+    });
+    return yy;
+  }
+
+  if (mode === "brief") {
+    // Page 1: headline + comparison table
+    doc.setFontSize(16);
+    doc.text("STEPS FETP India Decision Aid — Brief export", 14, 16);
+
+    doc.setFontSize(11);
+    const recLine =
+      `Recommendation: ${safeText(recommended.config.name || "Selected scenario")} ranks highest by net epidemiological benefit ` +
+      `among the included scenarios under the current assumptions and costing.`;
+    addWrappedText(recLine, 14, 24, pageW - 28, 5);
+
+    const tableY = 38;
+    doc.setFontSize(10);
+    doc.text("Scenario comparison (top/shortlisted):", 14, tableY);
+
+    // Render a simple table
+    const cols = [
+      { label: "Scenario", w: 55 },
+      { label: "Endorse", w: 20 },
+      { label: "Value", w: 30 },
+      { label: "Cost", w: 30 },
+      { label: "Epi", w: 30 },
+      { label: "Net", w: 30 },
+      { label: "BCR", w: 15 },
+      { label: "Feasibility", w: 25 }
+    ];
+    const x0 = 14;
+    let y0 = tableY + 6;
+    let x = x0;
+
+    doc.setFontSize(9);
+    cols.forEach((c) => {
+      doc.text(c.label, x + 1, y0);
+      x += c.w;
+    });
+    y0 += 3;
+    doc.line(x0, y0, x0 + cols.reduce((s, c) => s + c.w, 0), y0);
+    y0 += 5;
+
+    scenarios.forEach((s) => {
+      if (y0 > pageH - 30) {
+        doc.addPage();
+        y0 = 16;
+      }
+      const feas = s.capacity ? s.capacity.status : computeCapacity(s.config).status;
+
+      const row = [
+        safeText(s.config.name || "Scenario"),
+        `${formatNumber(s.endorseRate, 0)}%`,
+        formatCurrencyDisplay(s.wtpAllCohorts, 0),
+        formatCurrencyDisplay(s.natTotalCost, 0),
+        formatCurrencyDisplay(s.epiBenefitAllCohorts, 0),
+        formatCurrencyDisplay(s.netBenefitAllCohorts, 0),
+        s.natBcr !== null ? formatNumber(s.natBcr, 2) : "-",
+        safeText(feas)
+      ];
+
+      x = x0;
+      row.forEach((val, idx) => {
+        const w = cols[idx].w - 2;
+        const textLines = doc.splitTextToSize(String(val), w);
+        doc.text(textLines.slice(0, 2), x + 1, y0);
+        x += cols[idx].w;
+      });
+      y0 += 10;
+    });
+
+    // Page 2: assumptions + feasibility + enablers/risks
+    doc.addPage();
+    doc.setFontSize(14);
+    doc.text("Assumptions and feasibility summary", 14, 16);
+
+    // Assumptions box
+    doc.setFontSize(10);
+    doc.text("Assumptions used (for recommended scenario):", 14, 26);
+    drawBox(14, 30, pageW - 28, 62, null);
+    writeAssumptionsBox(recommendedAssumptions, 16, 36, pageW - 32);
+
+    // Feasibility
+    let y = 98;
+    doc.setFontSize(10);
+    doc.text("Capacity and feasibility:", 14, y);
+    y += 6;
+    doc.setFontSize(9);
+
+    const feasLines = [
+      `Status: ${safeText(recommendedCapacity.status)}`,
+      `Required mentors per cohort: ${formatNumber(recommendedCapacity.mentorsPerCohort, 0)} (capacity: ${formatNumber(recommendedCapacity.fellowsPerMentor, 1)} fellows/mentor)`,
+      `Total mentors required nationally: ${formatNumber(recommendedCapacity.totalMentorsRequired, 0)}`,
+      `Available mentors nationally: ${formatNumber(recommendedCapacity.availableMentors, 0)}`,
+      `Mentor shortfall: ${formatNumber(recommendedCapacity.mentorShortfall, 0)}`
+    ];
+    feasLines.forEach((ln) => {
+      y = addWrappedText(ln, 14, y, pageW - 28, 4.5);
+    });
+
+    if (recommendedCapacity.siteCapacity !== null) {
+      y = addWrappedText(
+        `Training sites/hubs capacity: ${formatNumber(recommendedCapacity.siteCapacity, 1)} cohorts/year (gap: ${formatNumber(recommendedCapacity.siteGap, 1)}).`,
+        14,
+        y + 1,
+        pageW - 28,
+        4.5
+      );
+    }
+
+    // Enablers / Risks
+    y += 4;
+    doc.setFontSize(10);
+    doc.text("Implementation enablers and risks:", 14, y);
+    y += 6;
+    doc.setFontSize(9);
+
+    const enablers = (notes.enablers || recommended.config.exportEnablers || "").trim();
+    const risks = (notes.risks || recommended.config.exportRisks || "").trim();
+
+    y = addWrappedText(`Enablers: ${enablers || "—"}`, 14, y, pageW - 28, 4.5);
+    y = addWrappedText(`Risks: ${risks || "—"}`, 14, y + 1, pageW - 28, 4.5);
+
+    doc.save("steps_saved_scenarios_brief.pdf");
+    showToast("Brief PDF downloaded.", "success");
+    return;
+  }
+
+  // Standard export (landscape): list scenarios with key metrics + assumptions box
   doc.setFontSize(14);
-  doc.text("STEPS FETP India Decision Aid - Saved scenarios", 10, y);
-  y += 8;
+  doc.text("STEPS FETP India Decision Aid — Saved scenarios", 10, 12);
+
+  let y = 20;
   doc.setFontSize(10);
 
-  appState.savedScenarios.forEach((s, idx) => {
-    if (y > 190) {
-      doc.addPage();
-      y = 10;
-    }
+  scenarios.forEach((s, idx) => {
     const c = s.config;
-    doc.text(`${idx + 1}. ${c.name || "Scenario"}`, 10, y);
-    y += 5;
-    doc.text(`Tier: ${c.tier} | Career: ${c.career} | Mentorship: ${c.mentorship} | Delivery: ${c.delivery} | Response: ${c.response} days`, 10, y);
-    y += 5;
-    doc.text(
-      `Cohorts: ${c.cohorts}, Trainees per cohort: ${c.traineesPerCohort}, Cost per trainee per month (INR): ${formatNumber(c.costPerTraineePerMonth, 0)}`,
-      10,
-      y
-    );
-    y += 5;
-    doc.text(`Endorsement: ${formatNumber(s.endorseRate, 1)}% | WTP per trainee per month (INR): ${formatNumber(s.wtpPerTraineePerMonth, 0)}`, 10, y);
-    y += 5;
-    doc.text(`Total WTP all cohorts (INR): ${formatNumber(s.wtpAllCohorts, 0)}`, 10, y);
-    y += 5;
-    doc.text(
-      `Total economic cost all cohorts (INR): ${formatNumber(s.natTotalCost, 0)} | Indicative outbreak cost saving (INR): ${formatNumber(s.epiBenefitAllCohorts, 0)}`,
-      10,
-      y
-    );
-    y += 5;
-    doc.text(
-      `Net outbreak cost saving (INR): ${formatNumber(s.netBenefitAllCohorts, 0)} | Benefit cost ratio: ${s.natBcr !== null ? formatNumber(s.natBcr, 2) : "-"}`,
-      10,
-      y
-    );
-    y += 7;
+    const cap = s.capacity || computeCapacity(c);
+    const a = buildAssumptionsForScenario(s);
+
+    if (y > pageH - 40) {
+      doc.addPage();
+      y = 14;
+    }
+
+    doc.setFontSize(12);
+    doc.text(`${idx + 1}. ${safeText(c.name || "Scenario")}`, 10, y);
+    y += 6;
+
+    doc.setFontSize(10);
+    const line1 =
+      `Endorsement: ${formatNumber(s.endorseRate, 1)}% | Perceived programme value (all cohorts): ${formatCurrencyDisplay(
+        s.wtpAllCohorts,
+        0
+      )} | Economic cost (all cohorts): ${formatCurrencyDisplay(s.natTotalCost, 0)} | BCR: ${s.natBcr !== null ? formatNumber(s.natBcr, 2) : "-"}`;
+    y = addWrappedText(line1, 10, y, pageW - 20, 4.5);
+
+    const line2 =
+      `Mentor support cost per cohort: ${formatCurrencyDisplay(s.costs?.mentorCostPerCohort ?? 0, 0)} ` +
+      `(${formatCurrencyDisplay(a.mentorSupportCostPerCohortBase, 0)} base × ${formatNumber(a.mentorMultiplierApplied, 1)} multiplier). ` +
+      `Direct cost per cohort: ${formatCurrencyDisplay(s.costs?.directCostPerCohort ?? 0, 0)}. Economic cost per cohort: ${formatCurrencyDisplay(
+        s.costs?.totalEconomicCostPerCohort ?? 0,
+        0
+      )} (${a.opportunityCostIncluded ? "includes" : "excludes"} opportunity cost).`;
+    y = addWrappedText(line2, 10, y, pageW - 20, 4.5);
+
+    const line3 =
+      `Epidemiological benefit (all cohorts): ${formatCurrencyDisplay(s.epiBenefitAllCohorts, 0)} | Net epidemiological benefit (all cohorts): ${formatCurrencyDisplay(
+        s.netBenefitAllCohorts,
+        0
+      )} | Outbreak responses/year (national): ${formatNumber(s.outbreaksPerYearNational, 1)} | Cross-sector multiplier: ${formatNumber(
+        a.crossSectorBenefitMultiplier,
+        2
+      )}`;
+    y = addWrappedText(line3, 10, y, pageW - 20, 4.5);
+
+    const line4 =
+      `Feasibility: ${safeText(cap.status)} (required mentors: ${formatNumber(cap.totalMentorsRequired, 0)}, available: ${formatNumber(
+        cap.availableMentors,
+        0
+      )}, shortfall: ${formatNumber(cap.mentorShortfall, 0)}).`;
+    y = addWrappedText(line4, 10, y, pageW - 20, 4.5);
+
+    // Assumptions box
+    const boxX = 10;
+    const boxY = y + 2;
+    const boxW = pageW - 20;
+    const boxH = 32;
+    drawBox(boxX, boxY, boxW, boxH, "Assumptions used");
+    y = writeAssumptionsBox(a, boxX + 2, boxY + 10, boxW - 4);
+    y = boxY + boxH + 8;
   });
 
   doc.save("steps_saved_scenarios.pdf");
-  showToast("Policy summary PDF downloaded.", "success");
+  showToast("PDF downloaded.", "success");
 }
+
 
 /* ===========================
    WTP based benefits and sensitivity
@@ -2537,7 +3152,7 @@ function exportSensitivityContainerToPdf() {
         body.push(row);
       });
 
-     	if (!head.length || !body.length) return;
+      if (!head.length || !body.length) return;
 
       if (y > pageH - margin - 80) {
         doc.addPage();
@@ -2776,115 +3391,222 @@ function applyOutbreakPreset(valueInINR, options = {}) {
 
 function buildScenarioJsonForCopilot(scenario) {
   const c = scenario.config;
+  const cap = scenario.capacity || computeCapacity(c);
+  const assumptions = buildAssumptionsForScenario(scenario);
+
   return {
-    metadata: {
-      generatedAt: new Date().toISOString(),
-      tool: "STEPS FETP India Decision Aid",
-      country: "India",
-      planningHorizonYears: scenario.planningYears,
-      discountRateForBenefits: scenario.discountRate
+    name: c.name || "Scenario",
+    tier: c.tier,
+    career: c.career,
+    mentorship: c.mentorship,
+    delivery: c.delivery,
+    responseTimeDays: c.response,
+    cohorts: c.cohorts,
+    traineesPerCohort: c.traineesPerCohort,
+    costPerTraineePerMonthINR: c.costPerTraineePerMonth,
+    opportunityCostIncluded: !!c.opportunityCostIncluded,
+    mentorSupportCostPerCohortBaseINR: Number(c.mentorSupportCostPerCohortBase || 0),
+    mentorMultiplierApplied: assumptions.mentorMultiplierApplied,
+    crossSectorBenefitMultiplier: assumptions.crossSectorBenefitMultiplier,
+    availableMentorsNational: assumptions.availableMentorsNational,
+    availableTrainingSites: assumptions.availableTrainingSites,
+    maxCohortsPerSitePerYear: assumptions.maxCohortsPerSitePerYear,
+
+    results: {
+      endorsementRatePct: scenario.endorseRate,
+      optOutRatePct: scenario.optOutRate,
+      perceivedProgrammeValuePerTraineePerMonthINR: scenario.wtpPerTraineePerMonth,
+      perceivedProgrammeValueAllCohortsINR: scenario.wtpAllCohorts,
+
+      programmeCostPerCohortINR: scenario.costs?.programmeCostPerCohort ?? 0,
+      mentorSupportCostPerCohortINR: scenario.costs?.mentorCostPerCohort ?? 0,
+      directCostPerCohortINR: scenario.costs?.directCostPerCohort ?? 0,
+      economicCostPerCohortINR: scenario.costs?.totalEconomicCostPerCohort ?? 0,
+      totalEconomicCostAllCohortsINR: scenario.natTotalCost,
+
+      epidemiologicalBenefitAllCohortsINR: scenario.epiBenefitAllCohorts,
+      netEpidemiologicalBenefitAllCohortsINR: scenario.netBenefitAllCohorts,
+      bcrNational: scenario.natBcr,
+
+      feasibility: {
+        status: cap.status,
+        mentorsPerCohort: cap.mentorsPerCohort,
+        totalMentorsRequired: cap.totalMentorsRequired,
+        availableMentors: cap.availableMentors,
+        mentorShortfall: cap.mentorShortfall,
+        siteCapacityCohortsPerYear: cap.siteCapacity,
+        siteGapCohorts: cap.siteGap
+      }
     },
-    configuration: {
-      name: c.name,
-      notes: c.notes,
-      tier: c.tier,
-      careerIncentive: c.career,
-      mentorshipIntensity: c.mentorship,
-      deliveryMode: c.delivery,
-      responseTimeDays: Number(c.response),
-      costPerTraineePerMonthINR: c.costPerTraineePerMonth,
-      traineesPerCohort: c.traineesPerCohort,
-      cohorts: c.cohorts,
-      opportunityCostIncluded: c.opportunityCostIncluded
+
+    assumptionsUsed: {
+      planningHorizonYears: assumptions.planningHorizonYears,
+      discountRate: assumptions.discountRate,
+      completionRate: assumptions.completionRate,
+      outbreaksPerGraduatePerYear: assumptions.outbreaksPerGraduatePerYear,
+      valuePerOutbreakINR: assumptions.valuePerOutbreak,
+      nonOutbreakValuePerGraduatePerYearINR: assumptions.valuePerGraduate
     },
-    preferenceModel: {
-      type: scenario.preferenceModel,
-      endorsementRatePercent: scenario.endorseRate,
-      optOutRatePercent: scenario.optOutRate,
-      wtpPerTraineePerMonthINR: scenario.wtpPerTraineePerMonth,
-      wtpPerCohortINR: scenario.wtpPerCohort,
-      wtpAllCohortsINR: scenario.wtpAllCohorts
-    },
-    costResults: {
-      programmeCostPerCohortINR: scenario.costs.programmeCostPerCohort,
-      opportunityCostPerCohortINR: scenario.costs.opportunityCostPerCohort,
-      economicCostPerCohortINR: scenario.costs.totalEconomicCostPerCohort,
-      totalEconomicCostAllCohortsINR: scenario.natTotalCost
-    },
-    epidemiologicalResults: {
-      graduatesPerCohort: scenario.graduatesPerCohort,
-      graduatesAllCohorts: scenario.graduatesAllCohorts,
-      outbreakResponsesPerYearPerCohort: scenario.outbreaksPerYearPerCohort,
-      outbreakResponsesPerYearNational: scenario.outbreaksPerYearNational,
-      epiBenefitPerCohortINR: scenario.epiBenefitPerCohort,
-      epiBenefitAllCohortsINR: scenario.epiBenefitAllCohorts
-    },
-    benefitCostResults: {
-      bcrPerCohortEpidemiological: scenario.bcrPerCohort,
-      bcrNationalEpidemiological: scenario.natBcr,
-      netBenefitPerCohortINR: scenario.netBenefitPerCohort,
-      netBenefitAllCohortsINR: scenario.netBenefitAllCohorts,
-      wtpOutbreakComponentAllCohortsINR: scenario.wtpOutbreakComponent,
-      totalWtpAllCohortsINR: scenario.wtpAllCohorts
+
+    exportNotes: {
+      enablers: c.exportEnablers || "",
+      risks: c.exportRisks || ""
     }
   };
 }
 
+
 function initCopilot() {
-  const btn = document.getElementById("copilot-open-and-copy-btn");
-  const textarea = document.getElementById("copilot-prompt-output");
+  const legacyBtn = document.getElementById("copilot-open-and-copy-btn");
+
+  const copilotBtn = document.getElementById("copilot-copy-btn");
+  const chatgptBtn = document.getElementById("chatgpt-copy-btn");
+  const downloadBtn = document.getElementById("briefing-download-btn");
+
+  const output = document.getElementById("copilot-prompt-output");
   const statusPill = document.getElementById("copilot-status-pill");
   const statusText = document.getElementById("copilot-status-text");
 
-  function setStatus(text) {
-    if (statusPill) statusPill.textContent = text;
+  function setStatus(ok, msg) {
+    if (statusPill) statusPill.className = ok ? "pill ok" : "pill warn";
+    if (statusText) statusText.textContent = msg;
   }
 
-  if (!btn || !textarea) return;
+  function buildPrompt(target) {
+    const selected = getShortlistedOrTopScenarios(3);
+    const scenarios = selected.length > 0 ? selected : (appState.savedScenarios.slice().sort((a,b)=> (b.netBenefitAllCohorts||0)-(a.netBenefitAllCohorts||0)).slice(0,3));
 
-  btn.addEventListener("click", async () => {
-    if (!appState.currentScenario) {
-      showToast("Apply a configuration before preparing the Copilot prompt.", "warning");
-      setStatus("Waiting for configuration");
-      textarea.value =
-        'Apply a configuration in STEPS and click "Open in Copilot and copy prompt" to generate the full interpretation prompt and scenario JSON. When the Copilot window opens, paste the copied text into the chat box.';
+    const recommended = scenarios.slice().sort((a, b) => (b.netBenefitAllCohorts || 0) - (a.netBenefitAllCohorts || 0))[0] || appState.currentScenario;
+    const notes = getExportNotesFromUI();
+
+    const scenarioObjects = scenarios.map(buildScenarioJsonForCopilot);
+    const recObj = recommended ? buildScenarioJsonForCopilot(recommended) : null;
+
+    const comparisonTable = scenarioTableMarkdownRows(scenarios);
+
+    const assumptions = recObj ? recObj.assumptionsUsed : null;
+    const feas = recObj ? recObj.results.feasibility : null;
+
+    const systemHint =
+      target === "copilot"
+        ? "You are drafting a concise policy-style briefing based on the STEPS Decision Aid outputs."
+        : "You are drafting a concise policy-style briefing based on the STEPS Decision Aid outputs. Use clear language and avoid jargon.";
+
+    const enablers = (notes.enablers || (recObj && recObj.exportNotes.enablers) || "").trim();
+    const risks = (notes.risks || (recObj && recObj.exportNotes.risks) || "").trim();
+
+    const prompt = [
+      systemHint,
+      "",
+      "Task:",
+      "Write a two-page equivalent briefing (or slide-ready notes) summarising the shortlisted scenarios and recommending an option. Use the scenario comparison table and the assumptions box. Clearly separate: (i) context and options, (ii) results and interpretation, (iii) feasibility, (iv) risks and enablers, (v) recommendation.",
+      "",
+      "Key requirement:",
+      "Use the term 'perceived programme value' for the preference-derived value metric (previously labelled WTP).",
+      "",
+      "Scenario comparison table (Markdown):",
+      comparisonTable,
+      "",
+      "Assumptions used (recommended scenario):",
+      assumptions
+        ? [
+            `Planning horizon: ${assumptions.planningHorizonYears} years`,
+            `Discount rate: ${(assumptions.discountRate * 100).toFixed(1)}%`,
+            `Completion rate: ${(assumptions.completionRate * 100).toFixed(1)}%`,
+            `Outbreak responses per graduate per year: ${assumptions.outbreaksPerGraduatePerYear}`,
+            `Value per outbreak (INR): ${assumptions.valuePerOutbreakINR}`,
+            `Non-outbreak value per graduate per year (INR): ${assumptions.nonOutbreakValuePerGraduatePerYearINR}`,
+            `Opportunity cost included: ${recObj.opportunityCostIncluded ? "Yes" : "No"}`,
+            `Mentor cost base per cohort (INR): ${recObj.mentorSupportCostPerCohortBaseINR}`,
+            `Mentorship multiplier applied: ${recObj.mentorMultiplierApplied}`,
+            `Cross-sector benefit multiplier: ${recObj.crossSectorBenefitMultiplier}`,
+            `Available mentors nationally: ${recObj.availableMentorsNational}`,
+            recObj.availableTrainingSites && recObj.maxCohortsPerSitePerYear
+              ? `Training sites/hubs: ${recObj.availableTrainingSites}; Max cohorts per site/year: ${recObj.maxCohortsPerSitePerYear}`
+              : "Training sites/hubs inputs: not provided"
+          ].join("\n")
+        : "—",
+      "",
+      "Capacity and feasibility (recommended scenario):",
+      feas
+        ? [
+            `Status: ${feas.status}`,
+            `Mentors per cohort: ${feas.mentorsPerCohort}`,
+            `Total mentors required: ${feas.totalMentorsRequired}`,
+            `Available mentors: ${feas.availableMentors}`,
+            `Mentor shortfall: ${feas.mentorShortfall}`,
+            feas.siteCapacityCohortsPerYear !== null && feas.siteCapacityCohortsPerYear !== undefined
+              ? `Site capacity (cohorts/year): ${feas.siteCapacityCohortsPerYear} (gap: ${feas.siteGapCohorts})`
+              : "Site capacity: not assessed"
+          ].join("\n")
+        : "—",
+      "",
+      "Implementation enablers (optional):",
+      enablers || "—",
+      "",
+      "Implementation risks (optional):",
+      risks || "—",
+      "",
+      "Data payload (JSON):",
+      JSON.stringify({ shortlistedScenarios: scenarioObjects, recommendedScenario: recObj }, null, 2)
+    ].join("\n");
+
+    return prompt;
+  }
+
+  function copyPromptToClipboard(prompt) {
+    if (!navigator.clipboard) {
+      setStatus(false, "Clipboard API not available. Copy manually from the text box.");
       return;
     }
+    navigator.clipboard
+      .writeText(prompt)
+      .then(() => setStatus(true, "Prompt copied to clipboard."))
+      .catch(() => setStatus(false, "Copy failed. Please copy manually."));
+  }
 
-    const scenarioJson = buildScenarioJsonForCopilot(appState.currentScenario);
-    const jsonText = JSON.stringify(scenarioJson, null, 2);
-
-    const fullText =
-      COPILOT_INTERPRETATION_PROMPT.trim() +
-      "\n\nThe STEPS scenario JSON is provided below between the markers <SCENARIO_JSON> and </SCENARIO_JSON>. Use it as the quantitative evidence base for your policy brief.\n\n<SCENARIO_JSON>\n" +
-      jsonText +
-      "\n</SCENARIO_JSON>\n";
-
-    textarea.value = fullText;
-    setStatus("Prompt ready");
-    if (statusText) {
-      statusText.textContent =
-        "The Copilot prompt is ready. When the Copilot window opens in a new tab, paste this text into the Copilot chat box and run it.";
+  function handle(target) {
+    if (!output) return;
+    if (!appState.savedScenarios || appState.savedScenarios.length === 0) {
+      setStatus(false, "Save at least one scenario first.");
+      output.value = "";
+      return;
     }
+    const prompt = buildPrompt(target);
+    output.value = prompt;
+    copyPromptToClipboard(prompt);
+  }
 
-    let copied = false;
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      try {
-        await navigator.clipboard.writeText(fullText);
-        copied = true;
-        showToast("Prompt copied. When Copilot opens, paste the text into the new window.", "success");
-      } catch (e) {
-        copied = false;
+  // Backwards compatible behaviour: one button that generates and copies the prompt
+  if (legacyBtn) {
+    legacyBtn.addEventListener("click", () => handle("copilot"));
+  }
+
+  if (copilotBtn) copilotBtn.addEventListener("click", () => handle("copilot"));
+  if (chatgptBtn) chatgptBtn.addEventListener("click", () => handle("chatgpt"));
+
+  if (downloadBtn) {
+    downloadBtn.addEventListener("click", () => {
+      if (!output || !output.value) {
+        setStatus(false, "Generate a prompt first.");
+        return;
       }
-    }
+      const blob = new Blob([output.value], { type: "text/plain;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "steps_briefing_prompt.txt";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      setStatus(true, "Text file downloaded.");
+    });
+  }
 
-    if (!copied) {
-      showToast("Prompt prepared. Copy it from the panel and paste into the Copilot window that opens.", "warning");
-    }
-
-    window.open("https://copilot.microsoft.com/", "_blank");
-  });
+  setStatus(true, "Ready.");
 }
+
 
 /* ===========================
    Snapshot modal
@@ -2919,26 +3641,75 @@ function openSnapshotModal(scenario) {
   const body = snapshotModal.querySelector("#snapshot-body");
   if (body) {
     const c = scenario.config;
+    const a = buildAssumptionsForScenario(scenario);
+
+    const mentorBase = scenario.costs?.mentorSupportCostPerCohortBase ?? c.mentorSupportCostPerCohortBase ?? 0;
+    const mentorMult = scenario.costs?.mentorCostMultiplier ?? mentorshipMultiplier(c.mentorship);
+    const mentorPerCohort = scenario.costs?.mentorCostPerCohort ?? 0;
+    const mentorAll = (mentorPerCohort || 0) * (c.cohorts || 0);
+
+    const directPerCohort = scenario.costs?.directCostPerCohort ?? (scenario.costs?.programmeCostPerCohort || 0) + mentorPerCohort;
+    const economicPerCohort = scenario.costs?.totalEconomicCostPerCohort ?? 0;
+
+    const cap = scenario.capacity || computeCapacity(c);
+
     body.innerHTML = `
-      <p><strong>Scenario name:</strong> ${c.name || ""}</p>
-      <p><strong>Tier:</strong> ${c.tier}</p>
-      <p><strong>Career incentive:</strong> ${c.career}</p>
-      <p><strong>Mentorship:</strong> ${c.mentorship}</p>
-      <p><strong>Delivery mode:</strong> ${c.delivery}</p>
-      <p><strong>Response time:</strong> ${c.response} days</p>
+      <p><strong>Scenario name:</strong> ${safeText(c.name || "")}</p>
+      <p><strong>Tier:</strong> ${safeText(c.tier)}</p>
+      <p><strong>Career incentive:</strong> ${safeText(c.career)}</p>
+      <p><strong>Mentorship:</strong> ${safeText(c.mentorship)}</p>
+      <p><strong>Delivery mode:</strong> ${safeText(c.delivery)}</p>
+      <p><strong>Response time:</strong> ${safeText(c.response)} days</p>
       <p><strong>Cohorts and trainees:</strong> ${formatNumber(c.cohorts, 0)} cohorts of ${formatNumber(c.traineesPerCohort, 0)} trainees</p>
       <p><strong>Cost per trainee per month:</strong> ${formatCurrencyDisplay(c.costPerTraineePerMonth, 0)}</p>
+
+      <hr />
+
       <p><strong>Endorsement:</strong> ${formatNumber(scenario.endorseRate, 1)}%</p>
-      <p><strong>Economic cost per cohort:</strong> ${formatCurrencyDisplay(scenario.costs.totalEconomicCostPerCohort, 0)}</p>
-      <p><strong>Indicative outbreak cost saving per cohort:</strong> ${formatCurrencyDisplay(scenario.epiBenefitPerCohort, 0)}</p>
-      <p><strong>Benefit cost ratio per cohort:</strong> ${scenario.bcrPerCohort !== null ? formatNumber(scenario.bcrPerCohort, 2) : "-"}</p>
+      <p><strong>Perceived programme value per trainee per month:</strong> ${formatCurrencyDisplay(scenario.wtpPerTraineePerMonth, 0)}</p>
+      <p><strong>Total perceived programme value (all cohorts):</strong> ${formatCurrencyDisplay(scenario.wtpAllCohorts, 0)}</p>
+
+      <hr />
+
+      <p><strong>Mentor support cost per cohort (base):</strong> ${formatCurrencyDisplay(mentorBase, 0)} (multiplier ${formatNumber(mentorMult, 1)} applied)</p>
+      <p><strong>Mentor support cost per cohort:</strong> ${formatCurrencyDisplay(mentorPerCohort, 0)}</p>
+      <p><strong>Total mentor support cost (all cohorts):</strong> ${formatCurrencyDisplay(mentorAll, 0)}</p>
+
+      <p><strong>Direct cost per cohort:</strong> ${formatCurrencyDisplay(directPerCohort, 0)}</p>
+      <p><strong>Economic cost per cohort:</strong> ${formatCurrencyDisplay(economicPerCohort, 0)} ${c.opportunityCostIncluded ? "(includes opportunity cost)" : "(excludes opportunity cost)"}</p>
+
       <p><strong>Total economic cost all cohorts:</strong> ${formatCurrencyDisplay(scenario.natTotalCost, 0)}</p>
-      <p><strong>Indicative outbreak cost saving all cohorts:</strong> ${formatCurrencyDisplay(scenario.epiBenefitAllCohorts, 0)}</p>
-      <p><strong>Net outbreak cost saving all cohorts:</strong> ${formatCurrencyDisplay(scenario.netBenefitAllCohorts, 0)}</p>
+
+      <hr />
+
+      <p><strong>Total indicative epidemiological benefit (per cohort):</strong> ${formatCurrencyDisplay(scenario.epiBenefitPerCohort, 0)}</p>
+      <p><strong>Net epidemiological benefit (per cohort):</strong> ${formatCurrencyDisplay(scenario.netBenefitPerCohort, 0)}</p>
+      <p><strong>Benefit cost ratio (per cohort):</strong> ${scenario.bcrPerCohort !== null ? formatNumber(scenario.bcrPerCohort, 2) : "-"}</p>
+
+      <p><strong>Total indicative epidemiological benefit (all cohorts):</strong> ${formatCurrencyDisplay(scenario.epiBenefitAllCohorts, 0)}</p>
+      <p><strong>Net epidemiological benefit (all cohorts):</strong> ${formatCurrencyDisplay(scenario.netBenefitAllCohorts, 0)}</p>
+      <p><strong>National benefit cost ratio:</strong> ${scenario.natBcr !== null ? formatNumber(scenario.natBcr, 2) : "-"}</p>
+
+      <hr />
+
+      <p><strong>Capacity and feasibility:</strong> ${safeText(cap.status)}</p>
+      <p><strong>Required mentors per cohort:</strong> ${formatNumber(cap.mentorsPerCohort, 0)} (capacity: ${formatNumber(cap.fellowsPerMentor, 1)} fellows/mentor)</p>
+      <p><strong>Total mentors required nationally:</strong> ${formatNumber(cap.totalMentorsRequired, 0)}</p>
+      <p><strong>Available mentors nationally:</strong> ${formatNumber(cap.availableMentors, 0)}</p>
+      <p><strong>Mentor shortfall:</strong> ${formatNumber(cap.mentorShortfall, 0)}</p>
+
+      <hr />
+
+      <p><strong>Assumptions used:</strong></p>
+      <p>Planning horizon: ${formatNumber(a.planningHorizonYears, 0)} years; Discount rate: ${formatNumber(a.discountRate * 100, 1)}%</p>
+      <p>Completion rate: ${formatNumber(a.completionRate * 100, 1)}%; Outbreak responses per graduate per year: ${formatNumber(a.outbreaksPerGraduatePerYear, 2)}</p>
+      <p>Value per outbreak: ${formatCurrencyDisplay(a.valuePerOutbreak, 0)}; Non-outbreak value per graduate per year: ${formatCurrencyDisplay(a.valuePerGraduate, 0)}</p>
+      <p>Cross-sector benefit multiplier: ${formatNumber(a.crossSectorBenefitMultiplier, 2)}</p>
     `;
   }
   snapshotModal.classList.remove("hidden");
 }
+
 
 /* ===========================
    Event wiring and refresh
@@ -2955,9 +3726,12 @@ function refreshAllOutputs(scenario) {
   updateEpiChart(scenario);
   refreshSensitivityTables();
   refreshSavedScenariosTable();
-  updateMETab(scenario);
   syncOutbreakValueDropdownsFromState();
+  if (scenario && scenario.config) {
+    updateValidationWarnings(scenario.config);
+  }
 }
+
 
 function initEventHandlers() {
   const costSlider = document.getElementById("cost-slider");
@@ -3095,28 +3869,6 @@ function initEventHandlers() {
     endorsementOverrideInput.addEventListener("change", () => {
       if (!appState.currentScenario) return;
       refreshSensitivityTables();
-    });
-  }
-
-  const meExcelBtn = document.getElementById("me-export-excel");
-  if (meExcelBtn) {
-    meExcelBtn.addEventListener("click", () => {
-      if (!appState.currentScenario) {
-        showToast("Apply a configuration before exporting the M&E logframe.", "warning");
-        return;
-      }
-      exportMELogframeToExcel();
-    });
-  }
-
-  const mePdfBtn = document.getElementById("me-export-pdf");
-  if (mePdfBtn) {
-    mePdfBtn.addEventListener("click", () => {
-      if (!appState.currentScenario) {
-        showToast("Apply a configuration before exporting the M&E summary.", "warning");
-        return;
-      }
-      exportMELogframeToPdf();
     });
   }
 
