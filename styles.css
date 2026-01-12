@@ -1,5 +1,6 @@
+
 /* ===========================
-   Base layout and evtypographmevy
+   Base layouttt and typoghgraphyy
    =========================== */
 
 :root {
@@ -73,8 +74,7 @@ body[data-theme="worldbank-dark"] .tab-bar {
     background-color: #020617;
 }
 
-body[data-theme="worldbank-dark"] .tab-link.active,
-body[data-theme="worldbank-dark"] .tablink.active {
+body[data-theme="worldbank-dark"] .tab-link.active {
     background-color: #020617;
 }
 
@@ -279,8 +279,7 @@ button {
 .btn-ghost,
 .btn-ghost-small,
 .btn-primary-small,
-.btn-link-small,
-.btn-secondary-small {
+.btn-link-small {
     border-radius: 999px;
     border: 1px solid transparent;
     padding: 8px 14px;
@@ -323,20 +322,6 @@ button {
 }
 
 .btn-secondary:hover {
-    background-color: var(--color-primary-soft);
-    border-color: var(--color-primary);
-    box-shadow: var(--shadow-soft);
-}
-
-.btn-secondary-small {
-    background-color: #FFFFFF;
-    color: var(--color-primary);
-    border-color: var(--color-primary-soft);
-    padding: 4px 10px;
-    font-size: 12px;
-}
-
-.btn-secondary-small:hover {
     background-color: var(--color-primary-soft);
     border-color: var(--color-primary);
     box-shadow: var(--shadow-soft);
@@ -472,8 +457,7 @@ button:disabled,
     border-radius: 999px 999px 0 0;
 }
 
-.tab-link,
-.tablink {
+.tab-link {
     border: none;
     background: transparent;
     padding: 8px 14px;
@@ -494,8 +478,7 @@ button:disabled,
         transform var(--transition-fast);
 }
 
-.tab-link.active,
-.tablink.active {
+.tab-link.active {
     color: var(--color-primary);
     font-weight: 600;
     border-bottom-color: var(--color-primary);
@@ -503,19 +486,16 @@ button:disabled,
     box-shadow: 0 3px 6px rgba(15, 23, 42, 0.10);
 }
 
-.tab-link:hover,
-.tablink:hover {
+.tab-link:hover {
     color: var(--color-primary-hover);
 }
 
-.tab-panel,
-.tabcontent {
+.tab-panel {
     display: none;
     margin-top: 12px;
 }
 
-.tab-panel.active,
-.tabcontent.active {
+.tab-panel.active {
     display: block;
 }
 
@@ -2376,31 +2356,6 @@ textarea:focus-visible {
 }
 
 /* ===========================
-   Monitoring & Evaluation tab
-   =========================== */
-
-.me-logic-model {
-    margin-top: 8px;
-    margin-bottom: 10px;
-    font-size: 13px;
-    color: var(--color-text-muted);
-}
-
-.me-logic-model p {
-    margin-bottom: 6px;
-}
-
-#me-indicators-table {
-    margin-top: 8px;
-}
-
-.me-notes {
-    margin-top: 10px;
-    font-size: 12px;
-    color: var(--color-text-muted);
-}
-
-/* ===========================
    PDF export specific styling
    =========================== */
 
@@ -2539,3 +2494,500 @@ textarea:focus-visible {
         word-break: break-word !important;
     }
 }
+
+/* ===========================
+   STEPS enhancements (non-breaking additions)
+   Supports added sections: mentor costs, capacity checks, export mode, brief export notes,
+   and Copilot/ChatGPT prompt buttons.
+   =========================== */
+
+/* Container alias used in updated index.html */
+.app-container {
+    max-width: 1240px;
+    margin: 16px auto 32px auto;
+    padding: 0 16px 24px 16px;
+}
+
+/* Header aliases (updated index.html uses header-inner/title/subtitle/actions) */
+.header-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 24px;
+    background-color: rgba(255, 255, 255, 0.96);
+    border-bottom: 1px solid rgba(148, 163, 184, 0.4);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    backdrop-filter: blur(12px);
+}
+
+body[data-theme="worldbank-dark"] .header-inner {
+    background-color: rgba(15, 23, 42, 0.96);
+    border-bottom-color: rgba(30, 64, 175, 0.6);
+}
+
+.header-title {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.header-title h1 {
+    margin: 0;
+    font-size: 19px;
+    font-weight: 600;
+    color: var(--color-text);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+}
+
+.header-title .subtitle,
+.subtitle {
+    margin: 0;
+    font-size: 12px;
+    color: var(--color-text-muted);
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+/* Tabs aliases (updated index.html uses .tab-nav, .tablink, .tabcontent) */
+.tab-nav {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 4px;
+    border-bottom: 1px solid var(--color-border);
+    margin-bottom: 12px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    background: linear-gradient(90deg, #EFF6FF, #F9FAFB);
+    padding: 4px 4px 0 4px;
+    border-radius: 999px 999px 0 0;
+}
+
+.tablink {
+    border: none;
+    background: transparent;
+    padding: 8px 14px;
+    font-size: 13px;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    border-radius: 999px;
+    border-bottom: 2px solid transparent;
+    position: relative;
+    white-space: nowrap;
+    flex: 0 0 auto;
+    margin-bottom: -1px;
+    transition:
+        color var(--transition-fast),
+        background-color var(--transition-fast),
+        box-shadow var(--transition-fast),
+        border-color var(--transition-fast),
+        transform var(--transition-fast);
+}
+
+.tablink.active {
+    color: var(--color-primary);
+    font-weight: 600;
+    border-bottom-color: var(--color-primary);
+    background-color: #FFFFFF;
+    box-shadow: 0 3px 6px rgba(15, 23, 42, 0.10);
+}
+
+.tablink:hover {
+    color: var(--color-primary-hover);
+}
+
+.tabcontent {
+    display: none;
+    margin-top: 12px;
+}
+
+.tabcontent.active {
+    display: block;
+}
+
+/* Intro card + summary information blocks */
+.intro-card {
+    background-color: var(--color-card);
+    border-radius: var(--radius-lg);
+    padding: 18px 20px;
+    box-shadow: var(--shadow-soft);
+    border: 1px solid rgba(15, 23, 42, 0.04);
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 10px;
+}
+
+@media (max-width: 1024px) {
+    .info-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+.info-item {
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border);
+    background-color: #FFFFFF;
+    padding: 10px 12px;
+}
+
+.info-item h3 {
+    margin: 0 0 4px 0;
+    font-size: 13px;
+}
+
+.info-item p {
+    margin: 0;
+    font-size: 12px;
+    color: var(--color-text-muted);
+}
+
+.callout {
+    margin-top: 10px;
+    border-radius: var(--radius-md);
+    padding: 10px 12px;
+    border: 1px solid rgba(37, 99, 235, 0.18);
+    background-color: var(--color-primary-soft);
+    color: var(--color-text);
+}
+
+/* Layout grids used in updated tabs */
+.config-layout,
+.settings-layout,
+.copilot-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.9fr) minmax(0, 1.4fr);
+    gap: 16px;
+    align-items: flex-start;
+}
+
+@media (max-width: 1100px) {
+    .config-layout,
+    .settings-layout,
+    .copilot-layout {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+/* Attribute cards in Configuration */
+.attribute-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 10px;
+}
+
+@media (max-width: 1024px) {
+    .attribute-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+.attribute-card {
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--color-border);
+    background-color: #FFFFFF;
+    padding: 12px 14px;
+    box-shadow: var(--shadow-soft);
+}
+
+.attribute-card:hover {
+    box-shadow: var(--shadow-medium);
+    transform: translateY(-1px);
+}
+
+.attribute-card .label-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.attribute-card label {
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.attribute-card select,
+.attribute-card input[type="number"],
+.attribute-card input[type="text"] {
+    width: 100%;
+}
+
+.attribute-card .helper {
+    margin: 6px 0 0 0;
+    font-size: 12px;
+    color: var(--color-text-muted);
+}
+
+/* Section headings inside Settings for clarity */
+.form-section-heading {
+    margin: 12px 0 6px 0;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+}
+
+/* Validation warnings */
+.warning-stack {
+    margin-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.warning-item,
+.warning {
+    border-radius: var(--radius-md);
+    padding: 8px 10px;
+    border: 1px solid #FED7AA;
+    background-color: var(--color-warning-soft);
+    color: #92400E;
+    font-size: 12px;
+}
+
+.warning-item strong {
+    font-weight: 700;
+}
+
+/* Capacity & feasibility summary cards */
+.capacity-panel {
+    margin-top: 10px;
+}
+
+.capacity-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 8px;
+}
+
+@media (max-width: 1024px) {
+    .capacity-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+.capacity-card {
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border);
+    background-color: #FFFFFF;
+    padding: 10px 12px;
+}
+
+.capacity-label {
+    font-size: 12px;
+    color: var(--color-text-muted);
+    margin-bottom: 2px;
+}
+
+.capacity-value {
+    font-size: 16px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.capacity-note {
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--color-text-muted);
+}
+
+/* Cost breakdown lines used in Results */
+.cost-line {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    border-bottom: 1px dashed var(--color-border);
+    padding: 4px 0;
+}
+
+.cost-line:last-child {
+    border-bottom: none;
+}
+
+.cost-line .label {
+    color: var(--color-text-muted);
+    font-size: 12px;
+}
+
+.cost-line .value {
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Export mode: radio pills */
+.pill-radio-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px;
+    background-color: #F3F4F6;
+    border-radius: 999px;
+}
+
+.pill-radio-group input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+    width: 1px;
+    height: 1px;
+}
+
+.pill-toggle-label {
+    border-radius: 999px;
+    border: none;
+    padding: 4px 10px;
+    font-size: 12px;
+    cursor: pointer;
+    background-color: transparent;
+    color: var(--color-text-muted);
+    white-space: nowrap;
+    transition:
+        background-color var(--transition-fast),
+        color var(--transition-fast),
+        box-shadow var(--transition-fast);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.pill-toggle-label.active,
+.pill-toggle-label:has(input[type="radio"]:checked) {
+    background-color: #FFFFFF;
+    color: var(--color-primary);
+    box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.25);
+}
+
+/* Brief export notes (enablers/risks) */
+.export-notes-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 12px 16px;
+    margin-top: 10px;
+}
+
+@media (max-width: 1024px) {
+    .export-notes-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+.export-notes-grid textarea,
+textarea#export-enablers,
+textarea#export-risks {
+    min-height: 110px;
+}
+
+/* Table wrappers used in updated index.html */
+.table-scroll {
+    overflow-x: auto;
+    overflow-y: visible;
+    margin-top: 8px;
+}
+
+.table-scroll:has(.tooltip-bubble),
+.table-scroll:has([role="tooltip"]) {
+    overflow-y: visible;
+}
+
+/* Copilot: two buttons row */
+.copilot-button-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    margin-top: 10px;
+}
+
+/* Modal internal layout aliases (script uses .modal-header/.modal-body) */
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 15px;
+}
+
+.modal-body {
+    font-size: 13px;
+    color: var(--color-text);
+}
+
+/* Tour popover aliases (index.html uses .tour-header/.tour-content/.tour-footer) */
+.tour-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.tour-header h3 {
+    font-size: 14px;
+    margin: 0;
+}
+
+.tour-content {
+    font-size: 13px;
+    color: var(--color-text);
+    margin-bottom: 8px;
+}
+
+.tour-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.tour-step {
+    font-size: 11px;
+    color: var(--color-text-muted);
+}
+
+/* Toast container alias (.toast-container exists in updated index.html) */
+.toast-container {
+    position: fixed;
+    right: 16px;
+    bottom: 16px;
+    z-index: 95;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-end;
+    pointer-events: none;
+}
+
+/* Scenario table in Scenarios tab */
+.scenarios-table {
+    width: 100%;
+}
+
+/* Ensure labels clearly link to inputs without changing existing label behaviour */
+label[for] {
+    cursor: pointer;
+}
+
